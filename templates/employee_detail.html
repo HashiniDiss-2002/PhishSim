@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% from "partials/_icons.html" import icon %}
+{% block title %}{{ employee.full_name }} · Risk Profile{% endblock %}
+{% block content %}
+
+<div class="ps-page-header">
+  <div>
+    <div class="ps-eyebrow">Employee risk profile</div>
+    <h1>{{ employee.full_name }}</h1>
+    <p class="ps-page-subtitle">{{ employee.email }} &middot; {{ employee.department }}</p>
+  </div>
+  <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary btn-sm">{{ icon('arrow-left', size=14) }} Back to Dashboard</a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-body d-flex flex-column justify-content-center align-items-center text-center">
+        <p class="text-muted mb-1" style="font-size:12.5px;">Risk Score <span class="text-muted">(Likelihood &times; Impact)</span></p>
+        <div class="ps-kpi-value" style="font-size:44px; color:{{ 'var(--ps-danger)' if risk.tier in ['Critical','High'] else 'var(--ps-warning)' if risk.tier == 'Medium' else 'var(--ps-success)' }};">
+          {{ risk.score }}
+        </div>
+        <span class="ps-badge mt-2 {{ 'ps-badge-danger' if risk.tier in ['Critical','High'] else 'ps-badge-warning' if risk.tier == 'Medium' else 'ps-badge-success' }}">
+          {{ risk.tier }}
+        </span>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-8">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="ps-section-title">How this score was calculated</div>
+        <p class="mb-2 text-muted" style="font-size:14px;">{{ risk.explanation }}</p>
+        <div class="d-flex gap-2 flex-wrap mt-2">
+          <span class="ps-badge ps-badge-neutral" data-bs-toggle="tooltip"
+                title="Behavioural likelihood alone - this is also what drives the next simulation's difficulty.">
+            Likelihood: {{ likelihood.score }} ({{ likelihood.tier }})
+          </span>
+          <span class="ps-badge ps-badge-info" data-bs-toggle="tooltip"
+                title="Department impact multiplier - editable in services/compliance_mapper.py's DEPARTMENT_IMPACT_WEIGHTS.">
+            &times; {{ "%.1f"|format(risk.impact_weight) }} impact weight ({{ employee.department or "unclassified" }})
+          </span>
+          <span class="ps-badge ps-badge-neutral">
+            = {{ risk.score }} final risk
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ps-kpi-grid">
+  <div class="ps-kpi-card"><div class="ps-kpi-value">{{ counts.total }}</div><div class="ps-kpi-label">Simulations</div></div>
+  <div class="ps-kpi-card"><div class="ps-kpi-value">{{ counts.open }}</div><div class="ps-kpi-label">Opened</div></div>
+  <div class="ps-kpi-card"><div class="ps-kpi-value">{{ counts.click }}</div><div class="ps-kpi-label">Clicked</div></div>
+  <div class="ps-kpi-card"><div class="ps-kpi-value">{{ counts.submit }}</div><div class="ps-kpi-label">Submitted</div></div>
+  <div class="ps-kpi-card"><div class="ps-kpi-value">{{ counts.download }}</div><div class="ps-kpi-label">Downloaded</div></div>
+  <div class="ps-kpi-card"><div class="ps-kpi-value">{{ counts.report }}</div><div class="ps-kpi-label">Reported</div></div>
+  <div class="ps-kpi-card"><div class="ps-kpi-value">{{ counts.called }}</div><div class="ps-kpi-label">Called (TOAD)</div></div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="ps-section-title">Susceptibility Profile</div>
+        <p class="text-muted" style="font-size:13px;">
+          Which persuasion principle (Cialdini) each received email relied on and how
+          often this employee acted on it (clicked, submitted, downloaded, or called).
+        </p>
+        {% if persuasion_profile %}
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Principle</th><th>Exposed</th><th>Fell for it</th><th>Rate</th></tr></thead>
+          <tbody>
+            {% for p in persuasion_profile %}
+            <tr>
+              <td class="text-capitalize">{{ p.principle.replace('_', ' ') }}</td>
+              <td>{{ p.exposed }}</td>
+              <td>{{ p.fell_for_it }}</td>
+              <td>
+                <span class="ps-badge {{ 'ps-badge-danger' if p.rate >= 0.5 else 'ps-badge-warning' if p.rate > 0 else 'ps-badge-success' }}">
+                  {{ "%.0f%%"|format(p.rate * 100) }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="ps-empty py-3">No tagged simulations yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="ps-section-title">Response Speed (click-timing signal)</div>
+        <p class="text-muted" style="font-size:13px;">
+          Time between the fake login page loading and this employee submitting the
+          form, averaged across submissions<!--- never any keystroke content-->.
+        </p>
+        {% if response_speed_label %}
+          <span class="ps-badge {{ 'ps-badge-danger' if 'Impulsive' in response_speed_label else 'ps-badge-warning' if 'Quick' in response_speed_label else 'ps-badge-success' }}">
+            {{ response_speed_label }}
+          </span>
+          <p class="text-muted mt-2 mb-0" style="font-size:12px;">Average: {{ avg_dwell_ms }} ms</p>
+        {% else %}
+        <div class="ps-empty py-3">No timing data recorded yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">{{ icon('shield', size=14) }} Compliance violations &amp; recommendations</div>
+  <div class="card-body">
+    {% for f in findings %}
+    <div class="d-flex gap-2 mb-3 pb-3 {{ 'border-bottom' if not loop.last }}">
+      <span class="ps-badge {{ 'ps-badge-danger' if f.severity in ['high','critical'] else 'ps-badge-warning' if f.severity == 'medium' else 'ps-badge-success' }}" style="flex-shrink:0;">{{ f.severity|upper }}</span>
+      <div style="flex:1; min-width:0;">
+        <div style="font-size:12px; font-weight:700; color:var(--ps-navy-800);">{{ f.regulation }}</div>
+        <p class="mb-1 mt-1" style="font-size:14px;">{{ f.finding }}</p>
+        {% if f.citations %}
+        <div style="background:var(--ps-bg); border:1px solid var(--ps-border); border-radius:var(--ps-radius-sm); padding:10px 12px; margin:8px 0;">
+          {% for c in f.citations %}
+          <div style="font-size:12px; {{ 'margin-top:8px;' if not loop.first }}">
+            <span style="font-weight:700; color:var(--ps-navy-800);">{{ c.jurisdiction }}</span>
+            <span class="text-muted"> - {{ c.article }}</span>
+            <div class="text-muted" style="font-style:italic; margin-top:2px;">{{ c.text }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if f.impact %}
+        <p class="mb-1" style="font-size:13px;"><em>Organisational impact:</em> {{ f.impact }}</p>
+        {% endif %}
+        <p class="mb-0 text-muted" style="font-size:13px;"><em>Recommendation:</em> {{ f.recommendation }}</p>
+      </div>
+    </div>
+    {% else %}
+    <div class="ps-empty py-3">No violations triggered yet - this employee hasn't been part of any simulations.</div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">Simulation history</div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Campaign</th><th>Condition</th><th>Difficulty</th><th>Events</th><th></th></tr></thead>
+      <tbody>
+        {% for h in history %}
+        <tr>
+          <td>{{ h.campaign_name }}</td>
+          <td><span class="ps-badge ps-badge-neutral">{{ h.condition }}</span></td>
+          <td><span class="ps-badge ps-badge-neutral">{{ h.difficulty_level }}</span></td>
+          <td>
+            {% for event in h.events %}
+              <span class="ps-badge ps-badge-info">{{ event }}</span>
+            {% else %}
+              <span class="text-muted">no interaction</span>
+            {% endfor %}
+          </td>
+          <td><a href="{{ url_for('admin.interaction_timeline', campaign_email_id=h.campaign_email_id) }}" class="btn btn-sm btn-outline-secondary">Timeline</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="ps-empty">No simulation history yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

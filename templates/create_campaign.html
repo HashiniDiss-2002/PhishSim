@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% from "partials/_icons.html" import icon %}
+{% block title %}New Campaign · PhishSim{% endblock %}
+{% block content %}
+
+<div class="ps-page-header">
+  <div>
+    <div class="ps-eyebrow">New campaign</div>
+    <h1>Create a phishing simulation</h1>
+    <p class="ps-page-subtitle">Generates one personalized email per employee<!-- for review before sending-->.</p>
+  </div>
+  <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary btn-sm">{{ icon('arrow-left', size=14) }} Back</a>
+</div>
+
+{% if is_dept_admin %}
+<div class="alert alert-info border-0" style="background:var(--ps-info-soft); color:var(--ps-navy-800);">
+  You're a <strong>{{ department }}</strong> department admin  - this campaign
+  will only target the <strong>{{ department }}</strong> department's
+  employees ({{ employees|length }} of them) and only you (or the core
+  admin) will be able to manage it.
+</div>
+{% endif %}
+
+{% if employees|length == 0 %}
+  <div class="card">
+    <div class="ps-empty">
+      <div class="ps-empty-icon">{{ icon('users', size=20) }}</div>
+      You need to upload employees{% if is_dept_admin %} to the {{ department }} department{% endif %}
+      before creating a campaign.<br>
+      <a href="{{ url_for('admin.upload_employees') }}" class="btn btn-sm btn-primary mt-3">Upload Employees</a>
+    </div>
+  </div>
+{% else %}
+<div class="card" style="max-width:720px">
+  <div class="card-body">
+    <form method="POST">
+      <div class="mb-4">
+        <label class="form-label fw-semibold">Campaign name</label>
+        <input type="text" name="name" class="form-control" placeholder="e.g. Q3 Awareness Test" required>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-semibold">Condition (for your evaluation study)</label>
+        <select name="condition" class="form-select">
+          <option value="personalized">Personalized (LLM-generated)</option>
+          <option value="generic">Generic (static template)</option>
+        </select>
+        <!--<div class="form-text">
+          For the personalized condition, the AI chooses the pretext itself for each
+          employee  - based on the organization's name and the employee's department.
+          This also drives the <strong>adaptive difficulty engine</strong>, quietly tuning
+          each pretext (reinforcement / standard / advanced) from the employee's own history.
+        </div>-->
+      </div>
+
+      <div class="mb-4 p-3" style="background:var(--ps-bg); border:1px solid var(--ps-border); border-radius:var(--ps-radius-sm);">
+        <label class="form-label fw-semibold mb-1">{{ icon('mail', size=14) }} Delivery vector</label>
+        <div class="form-text mb-2">
+          Choose between the Email link and  Callback phishing (TOAD)<!--is the standard flow (a tracked link to a fake login page). "Callback
+          phishing (TOAD)" puts <em>no link at all</em> in the email  - only a fictional phone
+          number  - simulating Telephone-Oriented Attack Delivery, which routes around
+          link/URL-based email filtering entirely. When selected, Condition and Fake login
+          page style below are ignored (TOAD uses its own fixed template).-->
+        </div>
+        <select name="vector" class="form-select">
+          <option value="email_link">Email link (standard)</option>
+          <option value="callback_toad">Callback phishing (TOAD)  - phone number only, no link</option>
+        </select>
+      </div>
+
+      <div class="mb-4 p-3" style="background:var(--ps-bg); border:1px solid var(--ps-border); border-radius:var(--ps-radius-sm);">
+        <label class="form-label fw-semibold mb-1">{{ icon('radio', size=14) }} Real-world campaign reference <span class="text-muted fw-normal">(optional  - Stage 2)</span></label>
+        <div class="form-text mb-2">
+          {% if stage2_scenarios %}
+          Pick the email scenario<!-- real, publicly reported phishing campaign the platform has already
+          discovered and analyzed and the AI will use its abstracted structural
+          pattern  - never the real article's literal content, domains, or links  - to
+          inform generation. Sources and extraction are curated by the platform engineer
+          (see the engineer's "Trending across your sources" panel for what's currently
+          most-reported). Each option shows the REAL campaign's delivery channel for your
+          awareness  - this platform still only sends over email (or TOAD's phone-call
+          template), so a scenario whose real channel was a messaging app or SMS is still
+          simulated via the email link, not that literal channel.-->
+          {% else %}
+          No Stage 2 scenarios have been discovered yet. Leave this as "None" for an
+          ordinary Stage 1 campaign.
+          {% endif %}
+        </div>
+        <select name="stage2_scenario_id" class="form-select" {{ 'disabled' if not stage2_scenarios }}>
+          <option value="">None  - ordinary Stage 1 campaign</option>
+          {% for scenario in stage2_scenarios %}
+          <option value="{{ scenario.id }}">
+            {{ scenario.article_title or scenario.article_url }} ({{ scenario.discovered_at }}){% if scenario.delivery_channel %}  - real-world channel: {{ channel_labels.get(scenario.delivery_channel, scenario.delivery_channel) }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="mb-4 p-3" style="background:var(--ps-bg); border:1px solid var(--ps-border); border-radius:var(--ps-radius-sm);">
+        <label class="form-label fw-semibold mb-1">{{ icon('image', size=14) }} Fake login page style</label>
+        <div class="form-text mb-2">
+          Choose what recipient sees after clicking the tracked link. <!--Both styles are
+          simulation-only  - neither ever reads or stores anything typed into the form.-->
+        </div>
+        <select name="fake_login_style" class="form-select">
+          <option value="standard">Standard  - a plain embedded login form</option>
+          <option value="bitb">Browser-in-the-Browser (BITB)  - a fake browser window drawn around the form</option>
+        </select>
+      </div>
+
+      <!--<div class="alert border-0 mb-4" style="background:var(--ps-info-soft); font-size:13px; color:var(--ps-navy-800);">
+        <strong>Sender/domain spoofing:</strong> every campaign also generates a
+        synthetic look-alike sender identity (display name + a non-resolving
+        look-alike domain derived from your organization's own name  - never a
+        real third-party domain). It's shown on the campaign page once created.
+      </div>-->
+
+      <p class="text-muted" style="font-size:13.5px;">This will generate one email per employee ({{ employees|length }} total) for review before sending.</p>
+
+      <button type="submit" class="btn btn-primary">{{ icon('send', size=14) }} Generate Emails</button>
+      <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-link">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

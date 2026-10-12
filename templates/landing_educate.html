@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Security Training Notice</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent: #f59e0b;      /* click-only: amber */
+      --accent-soft: #fef3c7;
+      --ink: #1e2432;
+    }
+    {% if just_called %}
+    :root { --accent: #7c3aed; --accent-soft: #ede9fe; } /* TOAD: violet */
+    {% elif just_submitted %}
+    :root { --accent: #dc2626; --accent-soft: #fee2e2; } /* submitted: red */
+    {% endif %}
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Inter', -apple-system, 'Segoe UI', Arial, sans-serif;
+      color: var(--ink);
+      background: radial-gradient(1200px 600px at 10% -10%, #eef2ff 0%, transparent 60%),
+                  radial-gradient(1000px 500px at 110% 10%, #e0f2fe 0%, transparent 55%),
+                  #f4f6fb;
+      padding: 48px 16px;
+    }
+    .shell { max-width: 720px; margin: 0 auto; }
+
+    .hero {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+    .hero-icon {
+      flex: 0 0 auto;
+      width: 56px; height: 56px;
+      border-radius: 16px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+    }
+    .hero-text .eyebrow {
+      font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--accent); margin: 0 0 2px;
+    }
+    .hero-text h1 {
+      font-size: 22px; font-weight: 800; margin: 0; color: var(--ink);
+    }
+
+    .card-main {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 12px 40px -8px rgba(16,24,40,.12);
+      border: 1px solid #edf0f5;
+      overflow: hidden;
+    }
+    .card-main .pad { padding: 32px 36px; }
+
+    .lede {
+      font-size: 16px;
+      line-height: 1.65;
+      color: #3a4150;
+      margin: 0;
+    }
+    .lede strong { color: var(--ink); }
+
+    .reassure {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-top: 18px;
+      padding: 14px 16px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 12px;
+      font-size: 14px;
+      color: #166534;
+    }
+    .reassure .dot {
+      flex: 0 0 auto;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: #16a34a;
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800;
+      margin-top: 1px;
+    }
+
+    .divider {
+      height: 1px;
+      background: #edf0f5;
+      margin: 28px 0;
+      border: none;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin: 0 0 14px;
+    }
+
+    .technique {
+      display: flex;
+      gap: 14px;
+      padding: 16px 18px;
+      border-radius: 14px;
+      border: 1px solid #edf0f5;
+      background: #fafbfd;
+      margin-bottom: 12px;
+    }
+    .technique .t-icon {
+      flex: 0 0 auto;
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px;
+      color: #fff;
+    }
+    .technique.violet .t-icon { background: #7c3aed; }
+    .technique.rose .t-icon { background: #e11d48; }
+    .technique.slate .t-icon { background: #475569; }
+    .technique p { margin: 4px 0 0; font-size: 14px; line-height: 1.6; color: #475467; }
+    .technique strong.t-title { font-size: 14.5px; color: var(--ink); }
+
+    .checklist { list-style: none; margin: 0; padding: 0; }
+    .checklist li {
+      display: flex;
+      gap: 12px;
+      padding: 11px 0;
+      border-bottom: 1px dashed #e8eaf0;
+      font-size: 14.5px;
+      color: #3a4150;
+      line-height: 1.5;
+    }
+    .checklist li:last-child { border-bottom: none; }
+    .checklist .mark {
+      flex: 0 0 auto;
+      width: 22px; height: 22px;
+      margin-top: 1px;
+      border-radius: 50%;
+      background: #eef2ff;
+      color: #4338ca;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .footer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 30px;
+      flex-wrap: wrap;
+    }
+    .footer-note { font-size: 12.5px; color: #8b93a3; max-width: 380px; }
+    .btn-report {
+      background: var(--ink);
+      border: none;
+      color: #fff;
+      font-weight: 600;
+      font-size: 14px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+    .btn-report:hover { transform: translateY(-1px); box-shadow: 0 8px 20px -6px rgba(16,24,40,.35); color: #fff; }
+    .btn-report:disabled { opacity: .6; cursor: default; transform: none; box-shadow: none; }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: .02em;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 999px;
+      padding: 5px 12px;
+      margin-bottom: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="hero">
+      <div class="hero-icon">
+        {% if just_called %}☎{% elif just_submitted %}🔓{% else %}⚠{% endif %}
+      </div>
+      <div class="hero-text">
+        <p class="eyebrow">Security Awareness Training</p>
+        <h1>This was a simulated phishing exercise</h1>
+      </div>
+    </div>
+
+    <div class="card-main">
+      <div class="pad">
+        <span class="badge-pill">
+          {% if just_called %}Callback phishing (TOAD){% elif just_submitted %}Credential harvesting simulation{% else %}Phishing-link simulation{% endif %}
+        </span>
+
+        {% if just_called %}
+        <p class="lede">
+          You just tapped or clicked the phone number in a simulated callback-phishing
+          (TOAD — Telephone-Oriented Attack Delivery) email, run by
+          <strong>{{ org_name or "your organization" }}</strong> as an authorised
+          security-awareness exercise.
+        </p>
+        <div class="reassure">
+          <span class="dot">✓</span>
+          <div>The number shown was <strong>never a real, reachable phone line</strong> — it
+          was a fictional number reserved for fiction/training use and could never connect to anyone.</div>
+        </div>
+        {% elif just_submitted %}
+        <p class="lede">
+          You just submitted data on a simulated phishing page, run by
+          <strong>{{ org_name or "your organization" }}</strong> as an authorised
+          security-awareness exercise.
+        </p>
+        <div class="reassure">
+          <span class="dot">✓</span>
+          <div>The platform <strong>does not log, read, or store</strong> anything you typed —
+          only the fact that a submission took place, for training statistics.</div>
+        </div>
+        {% else %}
+        <p class="lede">
+          You clicked a link in a simulated phishing email, run by
+          <strong>{{ org_name or "your organization" }}</strong> as an authorised
+          security-awareness training exercise.
+        </p>
+        <div class="reassure">
+          <span class="dot">✓</span>
+          <div>No real harm occurred and no data was collected beyond this event.</div>
+        </div>
+        {% endif %}
+
+        {% if just_called or spoofed_sender_name or fake_login_style == 'bitb' %}
+        <hr class="divider">
+        <p class="section-title">What technique was used</p>
+
+        {% if just_called %}
+        <div class="technique violet">
+          <div class="t-icon">☎</div>
+          <div>
+            <strong class="t-title">Callback phishing / TOAD</strong>
+            <p>This deliberately puts <strong>no link at all</strong> in the email — only a
+            phone number. That routes around email/URL security filters entirely, since
+            there's no malicious link or attachment for them to catch; the social
+            engineering happens verbally, after you call in.</p>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if spoofed_sender_name %}
+        <div class="technique rose">
+          <div class="t-icon">✉</div>
+          <div>
+            <strong class="t-title">Sender/domain spoofing</strong>
+            <p>This email appeared to come from
+            <strong>"{{ spoofed_sender_name }}" &lt;{{ spoofed_address }}&gt;</strong> — a
+            look-alike sender name and domain, not {{ org_name or "your organization" }}'s
+            real one. The display name looks trustworthy, but the actual address domain is
+            subtly different (a character swapped, a word added) from the real one.</p>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if fake_login_style == 'bitb' %}
+        <div class="technique slate">
+          <div class="t-icon">🪟</div>
+          <div>
+            <strong class="t-title">Browser-in-the-Browser (BITB)</strong>
+            <p>The "browser window" on the login page wasn't real — it was drawn entirely
+            with HTML/CSS <em>inside</em> the page to imitate one. Real giveaways: a fake
+            window can't be dragged outside your actual browser's borders, can't be
+            minimized/maximized by your OS, and your browser's <strong>real</strong> address
+            bar (right at the very top, outside the page content) never actually changed.</p>
+          </div>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <hr class="divider">
+        <p class="section-title">What to look for next time</p>
+        <ul class="checklist">
+          <li><span class="mark">✓</span> Urgent language pressuring you to act immediately</li>
+          <li><span class="mark">✓</span> Requests to click a link or verify account details unexpectedly</li>
+          <li><span class="mark">✓</span> Sender addresses that don't quite match the real organization</li>
+          <li><span class="mark">✓</span> A "browser window" that appears inside a web page rather than
+            as your browser's own window — check your browser's real, outermost address bar</li>
+        </ul>
+
+        <div class="footer-row">
+          <p class="footer-note">
+            Part of an authorised security-awareness exercise. No real data was collected and
+            no real harm occurred.
+          </p>
+          <form method="POST" action="{{ url_for('tracking.track_report', token=token) }}" id="phishsim-report-form">
+            <button type="submit" class="btn-report" id="phishsim-report-btn">Report this to IT</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Small UX nicety: confirm the report was recorded without leaving the
+    // page on a plain-text response (tracking.track_report returns a tiny
+    // text/plain body by design — see tracking.py).
+    (function () {
+      var form = document.getElementById('phishsim-report-form');
+      var btn = document.getElementById('phishsim-report-btn');
+      if (!form || !btn) return;
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        btn.disabled = true;
+        btn.textContent = 'Reporting…';
+        fetch(form.action, { method: 'POST' })
+          .then(function () {
+            btn.textContent = '✓ Reported — thank you';
+          })
+          .catch(function () {
+            btn.disabled = false;
+            btn.textContent = 'Report this to IT';
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

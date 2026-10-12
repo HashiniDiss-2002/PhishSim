@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% from "partials/_icons.html" import icon %}
+{% block title %}Stage 2 Threat Sources · PhishSim{% endblock %}
+{% block content %}
+
+<div class="ps-page-header">
+  <div>
+    <div class="ps-eyebrow">Platform engineer</div>
+    <h1>Stage 2 threat sources</h1>
+    <p class="ps-page-subtitle">
+      Only the platform engineer decides which CTI sites are trustworthy enough
+      to scan — client admins never see or choose a source, and never type a
+      URL or a summary themselves. The system reads only the registered page per
+      source and extracts STRUCTURAL features only (never literal domains, links,
+      or wording) from any article the LLM confirms is a phishing campaign write-up.
+    </p>
+  </div>
+  <a href="{{ url_for('admin.engineer_dashboard') }}" class="btn btn-outline-secondary btn-sm">{{ icon('arrow-left', size=14) }} Back</a>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">{{ icon('plus', size=14) }} Add a source</div>
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('admin.manage_threat_sources') }}" class="row g-2 align-items-end">
+      <input type="hidden" name="action" value="add_source">
+      <div class="col-md-6">
+        <label class="form-label">Listing or feed URL</label>
+        <input type="url" name="url" class="form-control" placeholder="https://example.com/tag/phishing/ or an RSS/Atom feed URL" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Label (optional)</label>
+        <input type="text" name="label" class="form-control" placeholder="e.g. HackerNews - phishing tag">
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">Add</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">{{ icon('chart', size=14) }} Trending across your sources (last {{ trends.window_days }} days)</div>
+  <div class="card-body">
+    <p class="text-muted" style="font-size:13px;">
+      Aggregated across every registered source's discovered scenarios — a tag reported by
+      several DIFFERENT sources outranks the same count from one source (see
+      services/threat_trends.py). "Other"/untagged scenarios are excluded as not meaningfully
+      a trend. {{ trends.total_in_window }} scenario(s) discovered in this window overall.
+    </p>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="ps-section-title">Delivery channel</div>
+        {% if trends.channels %}
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Channel</th><th>Count</th><th>Sources</th></tr></thead>
+          <tbody>
+            {% for t in trends.channels %}
+            <tr>
+              <td>{{ channel_labels.get(t.tag, t.tag) }}</td>
+              <td>{{ t.count }}</td>
+              <td>{{ t.distinct_sources }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="ps-empty py-3">No tagged channel trends in this window yet.</div>
+        {% endif %}
+      </div>
+      <div class="col-md-6">
+        <div class="ps-section-title">Pretext category</div>
+        {% if trends.categories %}
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Category</th><th>Count</th><th>Sources</th></tr></thead>
+          <tbody>
+            {% for t in trends.categories %}
+            <tr>
+              <td>{{ category_labels.get(t.tag, t.tag) }}</td>
+              <td>{{ t.count }}</td>
+              <td>{{ t.distinct_sources }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="ps-empty py-3">No tagged category trends in this window yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>{{ icon('radio', size=14) }} Registered sources</span>
+    <form method="POST" action="{{ url_for('admin.manage_threat_sources') }}"
+          onsubmit="return confirm('Scan all registered sources for new phishing-campaign articles now?');">
+      <input type="hidden" name="action" value="scan">
+      <button type="submit" class="btn btn-sm btn-success" {{ 'disabled' if not sources }}>
+        Scan All Sources
+      </button>
+    </form>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Label</th><th>URL</th><th>Added</th><th></th></tr></thead>
+      <tbody>
+        {% for source in sources %}
+        <tr>
+          <td>{{ source.label or "—" }}</td>
+          <td class="text-break"><small class="text-muted">{{ source.url }}</small></td>
+          <td class="text-muted">{{ source.created_at }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('admin.manage_threat_sources') }}"
+                  onsubmit="return confirm('Remove this source? Already-discovered scenarios from it are kept.');">
+              <input type="hidden" name="action" value="delete_source">
+              <input type="hidden" name="source_id" value="{{ source.id }}">
+              <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="ps-empty">No sources registered yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">{{ icon('log', size=14) }} Discovered scenarios</div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Title</th><th>Structural summary</th><th>Channel</th><th>Category</th><th>Discovered</th></tr></thead>
+      <tbody>
+        {% for scenario in scenarios %}
+        <tr>
+          <td style="max-width:220px;">
+            <a href="{{ scenario.article_url }}" target="_blank" rel="noopener">
+              {{ scenario.article_title or scenario.article_url }}
+            </a>
+          </td>
+          <td><pre class="mb-0" style="white-space:pre-wrap; font-size:12px;">{{ scenario.summary }}</pre></td>
+          <td>{% if scenario.delivery_channel %}<span class="ps-badge ps-badge-neutral">{{ channel_labels.get(scenario.delivery_channel, scenario.delivery_channel) }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          <td>{% if scenario.pretext_category_tag %}<span class="ps-badge ps-badge-neutral">{{ category_labels.get(scenario.pretext_category_tag, scenario.pretext_category_tag) }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          <td class="text-muted">{{ scenario.discovered_at }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="ps-empty">No scenarios discovered yet — add a source and run a scan.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

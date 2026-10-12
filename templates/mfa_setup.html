@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Set up MFA - PhishSim{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { height: 100%; margin: 0; font-family: 'Inter', -apple-system, sans-serif; }
+  .login-shell { min-height: 100vh; display: flex; }
+  .login-brand {
+    flex: 1;
+    background: linear-gradient(160deg, #14213D 0%, #1C2B4A 55%, #0F1B33 100%);
+    color: #FBFBF8;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 64px;
+    position: relative;
+    overflow: hidden;
+  }
+  .login-brand::before {
+    content: "";
+    position: absolute;
+    width: 520px; height: 520px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(94,234,212,0.10) 0%, rgba(94,234,212,0) 70%);
+    top: -120px; right: -160px;
+  }
+  .brand-mark { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 22px; z-index: 1; }
+  .brand-mark .badge-dot {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: rgba(94,234,212,0.12);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 19px;
+  }
+  .brand-headline { font-size: 36px; font-weight: 800; line-height: 1.25; max-width: 460px; z-index: 1; }
+  .brand-sub { font-size: 16px; color: #BFD8D5; max-width: 420px; line-height: 1.6; margin-top: 18px; z-index: 1; }
+  .brand-features { display: flex; flex-direction: column; gap: 18px; z-index: 1; }
+  .brand-feature { display: flex; align-items: flex-start; gap: 14px; font-size: 15px; color: #DCE6EE; }
+  .brand-feature .dot { width: 8px; height: 8px; border-radius: 50%; background: #5EEAD4; margin-top: 7px; flex-shrink: 0; }
+  .brand-footer { font-size: 13px; color: #7C8BA6; z-index: 1; }
+
+  .login-panel {
+    width: 520px; max-width: 48%;
+    background: #FBFBF8;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; overflow-y: auto;
+  }
+  .login-card { width: 100%; max-width: 400px; }
+  .login-card h1 { font-size: 24px; font-weight: 700; color: #14213D; margin-bottom: 6px; }
+  .login-card p.sub { font-size: 14px; color: #6a7179; margin-bottom: 24px; line-height: 1.5; }
+  .field-label { font-size: 13px; font-weight: 600; color: #14213D; margin-bottom: 6px; display: block; }
+  .field-input {
+    width: 100%; padding: 12px 14px;
+    border: 1px solid #E4E1D6; border-radius: 8px;
+    font-size: 18px; letter-spacing: 3px; text-align: center;
+    font-family: 'Inter', sans-serif;
+    background: #FFFFFF; color: #14213D;
+    margin-bottom: 16px; box-sizing: border-box;
+    transition: border-color 0.15s ease;
+  }
+  .field-input:focus { outline: none; border-color: #0B5E5A; box-shadow: 0 0 0 3px rgba(11,94,90,0.10); }
+  .btn-login {
+    width: 100%; padding: 13px;
+    background: #14213D; color: #FBFBF8;
+    border: none; border-radius: 8px;
+    font-size: 15px; font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer; transition: background 0.15s ease;
+  }
+  .btn-login:hover { background: #0F1B33; }
+
+  .mfa-step { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #0B5E5A; margin-bottom: 8px; }
+  .qr-box {
+    display: flex; justify-content: center; align-items: center;
+    padding: 16px; background: #FFFFFF; border: 1px solid #E4E1D6; border-radius: 10px;
+    margin-bottom: 16px;
+  }
+  .qr-box img { width: 180px; height: 180px; display: block; }
+  .secret-fallback {
+    background: #F4F2E9; border: 1px solid #E4E1D6; border-radius: 8px;
+    padding: 10px 12px; margin-bottom: 20px;
+  }
+  .secret-fallback .label { font-size: 11px; color: #6a7179; margin-bottom: 4px; }
+  .secret-fallback .value {
+    font-family: 'SFMono-Regular', Consolas, Menlo, monospace;
+    font-size: 14px; letter-spacing: 1.5px; color: #14213D;
+    word-break: break-all;
+  }
+  .error-banner {
+    background: #FDECEC; border: 1px solid #F3B7B7; color: #9B2C2C;
+    border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 16px;
+  }
+  .mfa-note { font-size: 12.5px; color: #9aa1ab; margin-top: 18px; line-height: 1.5; }
+
+  @media (max-width: 900px) {
+    .login-brand { display: none; }
+    .login-panel { max-width: 100%; width: 100%; }
+  }
+</style>
+{% endblock %}
+
+{% block container_class %}login-shell{% endblock %}
+
+{% block content %}
+<div class="login-brand">
+  <div class="brand-mark">
+    <span class="badge-dot">🛡️</span>
+    <span>PhishSim</span>
+  </div>
+  <div>
+    <div class="brand-headline">Multi-factor authentication is required on every account</div>
+    <div class="brand-sub">One extra step, every login — because a leaked password alone should never be enough to reach a tenant's phishing-campaign data.</div>
+    <div class="brand-features" style="margin-top:40px">
+      <div class="brand-feature"><span class="dot"></span>TOTP codes, compatible with Google Authenticator, Authy, 1Password</div>
+      <div class="brand-feature"><span class="dot"></span>Secret is generated server-side and shown to you once</div>
+      <div class="brand-feature"><span class="dot"></span>No opt-out — mandatory for admins and engineers alike</div>
+    </div>
+  </div>
+  <div class="brand-footer">Final-year research platform · Stage 1 MVP</div>
+</div>
+
+<div class="login-panel">
+  <div class="login-card">
+    <div class="mfa-step">Step 1 of 1 · One-time setup</div>
+    <h1>Set up your authenticator app</h1>
+    <p class="sub">Scan this QR code with an authenticator app (Google Authenticator, Authy, 1Password, etc.), then enter the 6-digit code it shows you to confirm.</p>
+
+    {% if error %}
+    <div class="error-banner">{{ error }}</div>
+    {% endif %}
+
+    <div class="qr-box">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={{ provisioning_uri | urlencode }}"
+           alt="Scan with your authenticator app" loading="lazy">
+    </div>
+
+    <div class="secret-fallback">
+      <div class="label">Can't scan? Enter this key manually instead:</div>
+      <div class="value">{{ secret }}</div>
+    </div>
+
+    <form method="POST">
+      <label class="field-label" for="code">6-digit code from your app</label>
+      <input type="text" id="code" name="code" class="field-input" required autofocus
+             inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="000000"
+             autocomplete="one-time-code">
+      <button type="submit" class="btn-login">Confirm &amp; finish setup</button>
+    </form>
+
+    <p class="mfa-note">
+      The QR code is rendered by a third-party QR-image service in your own browser, from the
+      otpauth:// link below — PhishSim's server never sends your secret anywhere but this page.
+      If you'd rather not use that service, use the manual key above instead.
+    </p>
+  </div>
+</div>
+{% endblock %}

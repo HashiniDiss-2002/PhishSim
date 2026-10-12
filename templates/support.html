@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% from "partials/_icons.html" import icon %}
+{% block title %}Contact Support · PhishSim{% endblock %}
+{% block content %}
+
+<div class="ps-page-header">
+  <div>
+    <div class="ps-eyebrow">Support</div>
+    <h1>Contact support</h1>
+    <p class="ps-page-subtitle">
+      Raise a ticket directly to the platform engineer - setup help, a bug, a billing question or
+      anything else. Need step-by-step setup instructions instead? See the <a href="{{ url_for('admin.faq') }}">FAQ &amp; setup guide</a>.
+    </p>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card mb-4">
+      <div class="card-header">{{ icon('mail', size=14) }} New ticket</div>
+      <div class="card-body">
+        <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:12.5px;">
+          Please don't include real employee names, email addresses, credentials or other personal
+          data in a ticket - describe the issue in general terms instead (e.g. "CSV upload fails for
+          a 50-row roster" rather than pasting the roster).
+        </div>
+        <form method="POST">
+          <label class="form-label fw-semibold" for="subject">Subject</label>
+          <input type="text" id="subject" name="subject" class="form-control" required maxlength="200"
+                 placeholder="e.g. Simulation emails landing in spam">
+          <label class="form-label fw-semibold mt-3" for="message">Message</label>
+          <textarea id="message" name="message" class="form-control" rows="6" required
+                    placeholder="Describe what you're seeing, what you expected and any steps to reproduce it."></textarea>
+          <button type="submit" class="btn btn-primary mt-3">{{ icon('send', size=14) }} Send to platform engineer</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card mb-4">
+      <div class="card-header">{{ icon('log', size=14) }} Your tickets</div>
+      <div class="card-body p-0">
+        {% if tickets %}
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Subject</th><th>Raised</th><th>Status</th><th>Response</th></tr></thead>
+          <tbody>
+            {% for t in tickets %}
+            <tr>
+              <td>
+                <div style="font-weight:600;">{{ t.subject }}</div>
+                <div class="text-muted" style="font-size:12px; white-space:pre-wrap;">{{ t.message }}</div>
+                <div class="text-muted" style="font-size:11.5px; margin-top:4px;">Raised by {{ t.raised_by_name }}</div>
+              </td>
+              <td class="text-muted" style="white-space:nowrap;">{{ t.created_at }}</td>
+              <td>
+                {% if t.status == 'resolved' %}
+                  <span class="ps-badge ps-badge-success">Resolved</span>
+                {% else %}
+                  <span class="ps-badge ps-badge-warning">Open</span>
+                {% endif %}
+              </td>
+              <td style="font-size:13px;">
+                {% if t.engineer_response %}
+                  <div>{{ t.engineer_response }}</div>
+                  <div class="text-muted" style="font-size:11.5px; margin-top:4px;">
+                    &mdash; {{ t.responded_by_name }}, {{ t.responded_at }}
+                  </div>
+                {% else %}
+                  <span class="text-muted">Awaiting response</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="ps-empty py-3">
+          <div class="ps-empty-icon">{{ icon('inbox', size=20) }}</div>
+          No tickets raised yet.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

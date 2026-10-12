@@ -1,0 +1,13 @@
+instance/
+*.db
+outbox/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+.env
+.DS_Store
+Thumbs.db
+.vscode/

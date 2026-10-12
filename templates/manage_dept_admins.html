@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "partials/_icons.html" import icon %}
+{% block title %}Manage Department Admins · PhishSim{% endblock %}
+{% block content %}
+
+<div class="ps-page-header">
+  <div>
+    <div class="ps-eyebrow">Organization</div>
+    <h1>Manage department admins</h1>
+    <p class="ps-page-subtitle">
+      A department admin can create campaigns and manage the employee roster for
+      their own department only. They cannot see or act on other departments'
+      data and cannot reach this page.
+    </p>
+  </div>
+  <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary btn-sm">{{ icon('arrow-left', size=14) }} Back</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card mb-4">
+      <div class="card-header">{{ icon('plus', size=14) }} Create department admin</div>
+      <div class="card-body">
+        <form method="POST">
+          <div class="mb-3">
+            <label class="form-label">Full name</label>
+            <input type="text" name="full_name" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Password</label>
+            <input type="password" name="password" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Department</label>
+            <input type="text" name="department" class="form-control" placeholder="e.g. IT" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Create Account</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card mb-4">
+      <div class="card-header">{{ icon('users', size=14) }} Existing department admins ({{ dept_admins|length }})</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Name</th><th>Email</th><th>Department</th><th></th></tr></thead>
+          <tbody>
+            {% for u in dept_admins %}
+            <tr>
+              <td>{{ u.full_name }}</td>
+              <td class="text-muted">{{ u.email }}</td>
+              <td><span class="ps-badge ps-badge-info">{{ u.department }}</span></td>
+              <td>
+                <form method="POST" action="{{ url_for('admin.reset_admin_password', user_id=u.id) }}"
+                      onsubmit="return confirm('Send a password reset link to ' + '{{ u.email }}' + '? They will choose their own new password — you will not set or see it.');">
+                  <button type="submit" class="btn btn-sm btn-outline-secondary">Reset Password</button>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="ps-empty">No department admins yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

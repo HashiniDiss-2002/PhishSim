@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+<body style="font-family:Arial,sans-serif; color:#222; line-height:1.5;">
+  <!-- OTP_CODE:{{ otp }} -->
+  <p>Hi {{ full_name }},</p>
+  <p>
+    Thanks for registering <strong>{{ org_name }}</strong> on PhishSim. Enter the
+    verification code below to confirm this is your email address and continue
+    setting up your organization's account.
+  </p>
+  <p style="font-size:28px; letter-spacing:6px; font-weight:bold; margin:20px 0;">{{ otp }}</p>
+  <p style="color:#666; font-size:13px;">
+    This code expires in {{ expiry_minutes }} minutes. If you didn't try to
+    register an organization on PhishSim, you can safely ignore this email --
+    no account will be created without this code.
+  </p>
+</body>
+</html>

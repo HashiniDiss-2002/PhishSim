@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% from "partials/_icons.html" import icon %}
+{% block title %}FAQ & Setup Guide · PhishSim{% endblock %}
+{% block content %}
+
+<div class="ps-page-header">
+  <div>
+    <div class="ps-eyebrow">Reference</div>
+    <h1>FAQ &amp; setup guide</h1>
+    <p class="ps-page-subtitle">
+      Step-by-step setup and answers to the questions that come up most. Can't find what you need?
+      <a href="{{ url_for('admin.contact_support') }}">Contact support</a> directly.
+    </p>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">{{ icon('send', size=14) }} Getting started, step by step</div>
+  <div class="card-body">
+    <ol class="mb-0" style="font-size:14px; line-height:1.9;">
+      <li><strong>Upload your employee roster.</strong> Go to <em>Upload Employees</em> and submit a CSV with
+        columns <code>full_name, email, department, job_title</code>. Re-uploading replaces the existing roster
+        for your organization (or your own department, if you're a department admin).</li>
+      <li><strong>Create a campaign.</strong> Go to <em>New Campaign</em>, give it a name, choose a condition
+        (generic or personalized pretexts), a delivery vector (email link or callback/TOAD), and optionally a
+        Stage 2 real-world reference scenario.</li>
+      <li><strong>Send a test email to yourself first.</strong> On the campaign's results page, use
+        <em>Send Test Email</em> before launching — it goes only to your own admin account, with a clearly
+        labelled placeholder link rather than a working tracking link.</li>
+      <li><strong>Check your email security settings.</strong> See "Why aren't simulation emails reaching
+        employee inboxes?" below <em>before</em> you launch — this is the single most common setup issue.</li>
+      <li><strong>Launch the campaign.</strong> Use <em>Send Campaign</em> to deliver it to every employee in
+        scope. Results, compliance findings, and the risk dashboard populate as employees interact with it.</li>
+      <li><strong>Review the dashboard.</strong> Your organization overview shows click/submission/report
+        rates, compliance findings with exact GDPR/PDPA citations, and the top 5 riskiest and top 5
+        quickest-responding employees.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="accordion" id="faqAccordion">
+
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+        Why aren't simulation emails reaching employee inboxes? (allow-listing, step by step)
+      </button>
+    </h2>
+    <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+      <div class="accordion-body" style="font-size:14px;">
+        <p>
+          This is the most common setup issue, and it's expected behaviour, not a bug: PhishSim's
+          simulation emails are deliberately designed to look like phishing (that's the point), so your
+          organization's own email security (Microsoft 365 Defender, Google Workspace, Proofpoint,
+          Mimecast, etc.) will often quarantine or block them exactly as it should for a real attack.
+        </p>
+        <p><strong>There are two different things people mean by "the sending domain" here — don't confuse them:</strong></p>
+        <ul>
+          <li><strong>The spoofed "From" address shown to employees</strong> (e.g. "Acme IT Support
+            &lt;no-reply@acme-c0rp-portal.com&gt;") — this is a synthetic look-alike identity
+            (see <em>services/domain_spoofing.py</em>), generated purely for realism. It is <u>never</u> the
+            real infrastructure the email is actually sent from.</li>
+          <li><strong>The real sending infrastructure</strong> — whatever SMTP relay this PhishSim instance
+            is configured with (e.g. a Mailtrap sandbox, or your organization's own relay via the
+            <code>SMTP_HOST</code> environment variable). This is the one your email gateway actually needs
+            to allow.</li>
+        </ul>
+        <p><strong>Step by step:</strong></p>
+        <ol>
+          <li>Ask whoever configured this PhishSim deployment for the real outbound sending domain/IP
+            (the <code>SMTP_HOST</code>/<code>SMTP_FROM_ADDRESS</code> it's using) — not the spoofed display
+            name shown in a campaign.</li>
+          <li>In your email security console, add a <strong>narrow, time-boxed</strong> allow rule for that
+            specific sending domain/IP only — not a blanket rule for the spoofed domain, and not a
+            permanent one:
+            <ul>
+              <li><strong>Microsoft 365 Defender:</strong> Email &amp; collaboration → Policies &amp; rules →
+                Threat policies → Tenant Allow/Block Lists → add the sending domain/IP as a temporary allow
+                entry, or create a scoped Exchange mail flow rule that bypasses spam filtering for mail from
+                that sender during your simulation window.</li>
+              <li><strong>Google Workspace:</strong> Admin console → Apps → Google Workspace → Gmail →
+                Spam, Phishing and Malware → add an approved sender list entry scoped to the sending
+                domain/IP, or a dedicated inbound gateway rule for the simulation window.</li>
+              <li><strong>Other gateways (Proofpoint, Mimecast, Barracuda, etc.):</strong> look for a
+                "bypass filtering for sender" or temporary allow-list feature scoped to a specific sender,
+                not a global domain exception.</li>
+            </ul>
+          </li>
+          <li><strong>Remove the allow rule again once the simulation window ends.</strong> Leaving a
+            standing exception in place weakens your real phishing defences for longer than necessary —
+            scope it to the campaign, not permanently.</li>
+          <li>Re-send a test email to yourself (step 3 of the setup guide above) to confirm it now lands.</li>
+        </ol>
+        <p class="text-muted mb-0">
+          Never allow-list the <em>spoofed</em> display domain itself in a way that would also let a real
+          attacker using the same look-alike domain through — the allow rule should key off the actual
+          sending infrastructure, scoped as narrowly as your email security product allows.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+        What format does the employee roster CSV need to be in?
+      </button>
+    </h2>
+    <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+      <div class="accordion-body" style="font-size:14px;">
+        Four columns, in any order, with a header row: <code>full_name</code>, <code>email</code>,
+        <code>department</code>, <code>job_title</code>. A department admin's upload is automatically forced
+        into their own department regardless of what the CSV says — this isn't an error, it's the
+        department-scoping rule. Re-uploading replaces the existing roster rather than appending to it.
+      </div>
+    </div>
+  </div>
+
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+        An employee can't get past the MFA setup/login screen — what do I do?
+      </button>
+    </h2>
+    <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+      <div class="accordion-body" style="font-size:14px;">
+        MFA (an authenticator-app code, via TOTP) is mandatory for every admin/engineer account and has no
+        in-app opt-out. If someone has lost the device their authenticator app was on, there's no self-service
+        recovery in this MVP — a core admin should reset their password (<em>Manage Admins</em> →
+        <em>Reset Password</em>), which emails a reset link; MFA on that account can then be re-enrolled from
+        scratch the next time they log in.
+      </div>
+    </div>
+  </div>
+
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+        What's the difference between a core admin and a department admin?
+      </button>
+    </h2>
+    <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+      <div class="accordion-body" style="font-size:14px;">
+        A <strong>core admin</strong> (no department set on their account) sees and manages everything across
+        the whole organization — every department's employees and campaigns, the audit log, other admin
+        accounts, and the organization's logo/settings. A <strong>department admin</strong> is scoped to their
+        own department only: their own department's employees, campaigns they create, and their own raised
+        support tickets. They can still view (but not manage) an org-wide campaign that touches their
+        department. Only a core admin can create department-admin accounts or view the full audit log.
+      </div>
+    </div>
+  </div>
+
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
+        How is the risk score / compliance finding calculated?
+      </button>
+    </h2>
+    <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+      <div class="accordion-body" style="font-size:14px;">
+        Risk = a behavioural likelihood score (click/download/submit/report rates from an employee's own
+        history) multiplied by a department impact weight (e.g. Finance/IT/Executive carry more weight, since
+        a compromised account there matters more). Compliance findings are a transparent, editable rules table
+        (<code>services/compliance_mapper.py</code>) that cites exact GDPR articles and Sri Lanka PDPA sections
+        with their quoted text — never a black-box score. See each finding's citation box on a campaign or
+        employee page for the exact source text and organizational impact/penalty exposure.
+      </div>
+    </div>
+  </div>
+
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq6">
+        I think I found a bug, or need something PhishSim can't currently do — now what?
+      </button>
+    </h2>
+    <div id="faq6" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+      <div class="accordion-body" style="font-size:14px;">
+        Use <a href="{{ url_for('admin.contact_support') }}">Contact Support</a> to raise a ticket directly to
+        the platform engineer. Please describe the issue in general terms rather than pasting real employee
+        data, credentials, or other personal information into the ticket.
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

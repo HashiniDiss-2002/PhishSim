@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% from "partials/_icons.html" import icon %}
+{% block title %}Engineer Dashboard · PhishSim{% endblock %}
+{% block content %}
+
+<div class="ps-page-header">
+  <div>
+    <div class="ps-eyebrow">Platform engineer</div>
+    <h1>Platform dashboard</h1>
+    <p class="ps-page-subtitle">
+      By design, this view shows only organization names, aggregate counts,
+      and each organization's own core admin as its accountable point of
+      contact — never employee names/emails, campaign names/content, or
+      interaction data. That belongs to each client organization's tenant,
+      not the platform operator.
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('admin.support_inbox') }}" class="btn btn-outline-primary btn-sm">
+      {{ icon('mail', size=14) }} Support Inbox
+    </a>
+    <a href="{{ url_for('admin.manage_threat_sources') }}" class="btn btn-outline-primary btn-sm">
+      {{ icon('radio', size=14) }} Stage 2 Threat Sources
+    </a>
+    <a href="{{ url_for('admin.engineer_audit_log') }}" class="btn btn-outline-secondary btn-sm">
+      {{ icon('log', size=14) }} Platform Audit Log
+    </a>
+  </div>
+</div>
+
+<div class="ps-kpi-grid">
+  <div class="ps-kpi-card">
+    <div class="ps-kpi-top"><div class="ps-kpi-icon">{{ icon('building', size=16) }}</div></div>
+    <div class="ps-kpi-value">{{ org_count }}</div>
+    <div class="ps-kpi-label">Client organizations</div>
+  </div>
+  <div class="ps-kpi-card">
+    <div class="ps-kpi-top"><div class="ps-kpi-icon">{{ icon('send', size=16) }}</div></div>
+    <div class="ps-kpi-value">{{ campaign_count }}</div>
+    <div class="ps-kpi-label">Total campaigns (all tenants)</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">{{ icon('building', size=14) }} Organizations</div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Organization</th><th>Core admin (accountable contact)</th><th>Campaigns</th><th>Status</th><th>On platform since</th><th></th></tr></thead>
+      <tbody>
+        {% for org in organizations %}
+        <tr>
+          <td>{{ org.name }}</td>
+          <td>
+            {% if org.core_admin_email %}
+              <div>{{ org.core_admin_name }}</div>
+              <div class="text-muted" style="font-size:12.5px;">{{ org.core_admin_email }}</div>
+            {% else %}
+              <span class="text-muted">No core admin on record</span>
+            {% endif %}
+          </td>
+          <td>{{ org.campaign_count }}</td>
+          <td>
+            {% if org.suspended %}
+              <span class="ps-badge ps-badge-danger">Suspended</span>
+            {% else %}
+              <span class="ps-badge ps-badge-success">Active</span>
+            {% endif %}
+          </td>
+          <td class="text-muted">{{ org.created_at }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('admin.toggle_org_suspend', org_id=org.id) }}"
+                  onsubmit="return confirm('{{ 'Reactivate' if org.suspended else 'Suspend' }} {{ org.name }}?');">
+              {% if org.suspended %}
+                <button type="submit" class="btn btn-sm btn-outline-success">Reactivate</button>
+              {% else %}
+                <button type="submit" class="btn btn-sm btn-outline-danger">Suspend</button>
+              {% endif %}
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="ps-empty">No organizations yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

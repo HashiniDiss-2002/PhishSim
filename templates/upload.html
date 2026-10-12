@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% from "partials/_icons.html" import icon %}
+{% block title %}Upload Employees · PhishSim{% endblock %}
+{% block content %}
+
+<div class="ps-page-header">
+  <div>
+    <div class="ps-eyebrow">Employee roster</div>
+    <h1>Upload employee roster</h1>
+    <p class="ps-page-subtitle">CSV must include columns: <code>full_name, email, department</code> (an optional <code>job_title</code> column is also read).</p>
+  </div>
+  <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary btn-sm">{{ icon('arrow-left', size=14) }} Back</a>
+</div>
+
+{% if is_dept_admin %}
+<div class="alert border-0 mb-4" style="background:var(--ps-info-soft); color:var(--ps-navy-800);">
+  You're a <strong>{{ department }}</strong> department admin — every employee
+  you upload here is added to the <strong>{{ department }}</strong> department
+  automatically. If your CSV has its own <code>department</code> column, its
+  values are ignored and overridden with <strong>{{ department }}</strong>.
+</div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">{{ icon('upload', size=14) }} Upload CSV</div>
+      <div class="card-body">
+        <div class="alert border-0 mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2"
+             style="background:var(--ps-info-soft); color:var(--ps-navy-800);">
+          <span>Don't have a CSV ready? Download the template, replace the example rows with your
+            roster, then upload it below.</span>
+          <a href="{{ url_for('admin.download_roster_template') }}" class="btn btn-sm btn-primary text-nowrap">
+            {{ icon('download', size=14) }} Download Template
+          </a>
+        </div>
+        <form method="POST" enctype="multipart/form-data">
+          <div class="mb-3">
+            <input type="file" name="csv_file" accept=".csv" class="form-control" required>
+          </div>
+          <button type="submit" class="btn btn-primary">{{ icon('upload', size=14) }} Upload</button>
+          <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-link">Cancel</a>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Example CSV content</span>
+        <a href="{{ url_for('admin.download_roster_template') }}" class="btn btn-sm btn-outline-secondary">
+          {{ icon('download', size=14) }} Download
+        </a>
+      </div>
+      <div class="card-body">
+        <pre class="bg-light p-2 border rounded mb-0" style="font-size:12.5px;">full_name,email,department,job_title
+Jordan Lee,jordan.lee@example.com,Finance,Analyst
+Morgan Diaz,morgan.diaz@example.com,IT,Support Engineer</pre>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

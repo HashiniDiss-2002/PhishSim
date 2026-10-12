@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Responsible Use Declaration - PhishSim{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="ps-eyebrow">Before you continue</div>
+        <h2 class="mb-1">Responsible Use Declaration</h2>
+        <p class="text-muted" style="font-size:14px;">
+          For <strong>{{ pending.org_name }}</strong>, registered by {{ pending.full_name }}
+          ({{ pending.email }}). Please read this declaration before continuing - accepting it
+          creates your account; rejecting it discards this registration entirely.
+        </p>
+
+        <div class="border rounded p-3 mb-3" style="background:#f8f7ff; font-size:14px; max-height:360px; overflow-y:auto;">
+          <p><strong>By accepting, I confirm that:</strong></p>
+          <ol>
+            <li>
+              I have the authority to run simulated phishing exercises against the employees
+              I upload to this platform and I have obtained whatever internal approval,
+              informed consent and/or institutional ethics approval my organization or
+              research context requires before sending any simulation.
+            </li>
+            <li>
+              I will not use this platform to target, harass or deceive anyone outside a
+              properly authorized security-awareness exercise or research study.
+            </li>
+            <li>
+              I understand that every simulated email leads to an immediate educational
+              debrief page the moment an employee submits the fake form - this platform is built around
+              disclosure, not deception for its own sake.
+            </li>
+            <li>
+              I understand that this platform never captures or stores anything an employee
+              types into a simulated login form - only the fact that a submission occurred is
+              logged.
+            </li>
+            <li>
+              If I use the Stage 2 "real-world-informed" feature, I understand the structural
+              patterns used are abstracted from public threat-intelligence reports and never
+              contain the original campaign's literal domains, links or wording.
+            </li>
+            <li>
+              I will not use the generated content for actual fraud, credential theft or any
+              purpose outside an authorized simulation.
+            </li>
+          </ol>
+        </div>
+
+        <div class="d-flex gap-2">
+          <form method="POST">
+            <input type="hidden" name="action" value="accept">
+            <button type="submit" class="btn btn-primary">I Accept - Create My Account</button>
+          </form>
+          <form method="POST">
+            <input type="hidden" name="action" value="reject">
+            <button type="submit" class="btn btn-outline-danger">I Reject - Cancel Registration</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "partials/_icons.html" import icon %}
+{% block title %}Settings · PhishSim{% endblock %}
+{% block content %}
+
+<div class="ps-page-header">
+  <div>
+    <div class="ps-eyebrow">Account</div>
+    <h1>Settings</h1>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card mb-4">
+      <div class="card-header">{{ icon('key', size=14) }} Change Password</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('auth.settings') }}">
+          <div class="mb-3">
+            <label class="form-label">Current password</label>
+            <input type="password" name="current_password" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">New password</label>
+            <input type="password" name="new_password" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Confirm new password</label>
+            <input type="password" name="confirm_password" class="form-control" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Update Password</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {% if is_core_admin %}
+  <div class="col-md-6">
+    <div class="card mb-4">
+      <div class="card-header">{{ icon('image', size=14) }} Organization Logo</div>
+      <div class="card-body">
+        <p class="text-muted" style="font-size:13px;">
+          Upload the official logo of the organization.
+        </p>
+        <form method="POST" action="{{ url_for('admin.upload_logo') }}" enctype="multipart/form-data">
+          <div class="mb-3">
+            <input type="file" name="logo_file" class="form-control" accept="image/*" required>
+          </div>
+          <button type="submit" class="btn btn-outline-dark">{{ icon('upload', size=14) }} Upload Logo</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

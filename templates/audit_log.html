@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "partials/_icons.html" import icon %}
+{% block title %}Audit Log · PhishSim{% endblock %}
+{% block content %}
+
+<div class="ps-page-header">
+  <div>
+    <div class="ps-eyebrow">Organization</div>
+    <h1>Audit log</h1>
+    <p class="ps-page-subtitle">
+      Every campaign, employee-roster and account action taken within your organization will be recorded.
+    </p>
+  </div>
+  <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary btn-sm">{{ icon('arrow-left', size=14) }} Back</a>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Detail</th></tr></thead>
+      <tbody>
+        {% for entry in entries %}
+        <tr>
+          <td class="text-nowrap text-muted">{{ entry.created_at }}</td>
+          <td>{{ entry.actor_name or "-" }}<br><small class="text-muted text-capitalize">{{ entry.actor_role or "" }}</small></td>
+          <td><span class="ps-badge ps-badge-neutral">{{ entry.action }}</span></td>
+          <td>{{ entry.description }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="ps-empty">No actions recorded yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

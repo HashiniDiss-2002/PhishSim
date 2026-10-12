@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "partials/_icons.html" import icon %}
+{% block title %}Platform Audit Log · PhishSim{% endblock %}
+{% block content %}
+
+<div class="ps-page-header">
+  <div>
+    <div class="ps-eyebrow">Platform</div>
+    <h1>Platform audit log</h1>
+    <p class="ps-page-subtitle">
+      Filtered to platform-level events only — organization registrations and
+      suspend/reactivate actions. It never shows campaign names, employee data, or
+      any other tenant content; that stays inside each organization's own audit log.
+    </p>
+  </div>
+  <a href="{{ url_for('admin.engineer_dashboard') }}" class="btn btn-outline-secondary btn-sm">{{ icon('arrow-left', size=14) }} Back to Dashboard</a>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>When</th><th>Organization</th><th>Action</th><th>Detail</th></tr></thead>
+      <tbody>
+        {% for entry in entries %}
+        <tr>
+          <td class="text-nowrap text-muted">{{ entry.created_at }}</td>
+          <td>{{ entry.org_name or "—" }}</td>
+          <td><span class="ps-badge ps-badge-neutral">{{ entry.action }}</span></td>
+          <td>{{ entry.description }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="ps-empty">No platform-level actions recorded yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

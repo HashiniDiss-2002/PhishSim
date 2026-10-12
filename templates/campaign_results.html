@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% from "partials/_icons.html" import icon %}
+{% block title %}{{ campaign.name }} · PhishSim{% endblock %}
+{% block content %}
+
+<div class="ps-page-header">
+  <div>
+    <div class="ps-eyebrow">Campaign results</div>
+    <h1 class="d-flex align-items-center gap-2 flex-wrap">
+      {{ campaign.name }}
+      <span class="ps-badge ps-badge-neutral">{{ campaign.condition }}</span>
+      {% if campaign.department %}
+        <span class="ps-badge ps-badge-info">{{ campaign.department }}</span>
+      {% else %}
+        <span class="ps-badge ps-badge-neutral">Org-wide</span>
+      {% endif %}
+      {% if campaign.stage2_reference %}
+        <span class="ps-badge ps-badge-purple" data-bs-toggle="tooltip" title="Real-world-informed (Stage 2)">Stage 2</span>
+      {% endif %}
+      {% if campaign.vector == 'callback_toad' %}
+        <span class="ps-badge ps-badge-danger" data-bs-toggle="tooltip" title="Callback phishing / TOAD - no link, phone number only">TOAD</span>
+      {% endif %}
+    </h1>
+    <p class="ps-page-subtitle">
+      Simulated sender: <strong>{{ campaign.spoofed_sender_name }}</strong> &lt;{{ campaign.spoofed_address }}&gt;
+      <!--<span class="text-muted">- a synthetic look-alike domain, never a real third-party domain.</span>-->
+    </p>
+  </div>
+  <div class="d-flex gap-2 align-items-center flex-wrap">
+    {% if can_manage %}
+      {% if campaign.status == 'draft' %}
+      <form method="POST" action="{{ url_for('admin.test_send_campaign', campaign_id=campaign.id) }}">
+        <button type="submit" class="btn btn-outline-secondary btn-sm">Send Test Email</button>
+      </form>
+      <form method="POST" action="{{ url_for('admin.send_campaign', campaign_id=campaign.id) }}"
+            onsubmit="return confirm('This will (simulate) sending emails to all recipients. Continue?');">
+        <button type="submit" class="btn btn-sm" style="background:var(--ps-warning); color:#fff;">{{ icon('send', size=14) }} Send Campaign</button>
+      </form>
+      {% else %}
+      <span class="ps-badge ps-badge-success">Status: {{ campaign.status }}</span>
+      {% endif %}
+      <form method="POST" action="{{ url_for('admin.delete_campaign', campaign_id=campaign.id) }}"
+            onsubmit="return confirm('Delete this campaign and all its data? This cannot be undone.');">
+        <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+      </form>
+    {% else %}
+      <span class="ps-badge ps-badge-success">Status: {{ campaign.status }}</span>
+      <span class="text-muted small">View only - created by core admin</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="d-flex gap-2 mb-4">
+  <a href="{{ url_for('admin.campaign_report_pdf', campaign_id=campaign.id) }}" class="btn btn-sm btn-outline-primary">
+    {{ icon('download', size=14) }} Compliance Report (PDF)
+  </a>
+  <a href="{{ url_for('admin.campaign_report_csv', campaign_id=campaign.id) }}" class="btn btn-sm btn-outline-primary">
+    {{ icon('download', size=14) }} Compliance Report (CSV)
+  </a>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body" style="font-size:13px;">
+    <strong>MITRE ATT&amp;CK techniques demonstrated:</strong>
+    {% for t in attack_techniques %}
+      <a href="{{ t.url }}" target="_blank" rel="noopener" class="ps-badge ps-badge-neutral text-decoration-none me-1"
+         data-bs-toggle="tooltip" title="{{ t.description }}">{{ t.id }} - {{ t.name }}</a>
+    {% endfor %}
+  </div>
+</div>
+
+{% if campaign.stage2_reference %}
+<!--<div class="card mb-4">
+  <div class="card-body" style="font-size:13px;">
+    <strong>Stage 2 - real-world structural reference used for this campaign:</strong>
+    {% if campaign.stage2_source_url %}
+      <div class="text-muted">Auto-extracted from: <a href="{{ campaign.stage2_source_url }}" target="_blank" rel="noopener">{{ campaign.stage2_source_url }}</a></div>
+    {% else %}
+      <div class="text-muted">Entered manually.</div>
+    {% endif %}
+    <pre class="mb-0 mt-1" style="white-space:pre-wrap; font-family:inherit;">{{ campaign.stage2_reference }}</pre>
+  </div>
+</div>-->
+{% endif %}
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-7">
+    <div class="ps-kpi-grid" style="margin-bottom:0;">
+      <div class="ps-kpi-card"><div class="ps-kpi-value">{{ counts.total }}</div><div class="ps-kpi-label">Recipients</div></div>
+      <div class="ps-kpi-card"><div class="ps-kpi-value">{{ counts.open }}</div><div class="ps-kpi-label">Opened</div></div>
+      <div class="ps-kpi-card"><div class="ps-kpi-value">{{ counts.click }}</div><div class="ps-kpi-label">Clicked</div></div>
+      <div class="ps-kpi-card"><div class="ps-kpi-value">{{ counts.submit }}</div><div class="ps-kpi-label">Submitted</div></div>
+      <div class="ps-kpi-card"><div class="ps-kpi-value">{{ counts.download }}</div><div class="ps-kpi-label">Downloaded</div></div>
+      <div class="ps-kpi-card"><div class="ps-kpi-value">{{ counts.report }}</div><div class="ps-kpi-label">Reported</div></div>
+      <div class="ps-kpi-card"><div class="ps-kpi-value">{{ counts.called }}</div><div class="ps-kpi-label">Called (TOAD)</div></div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card h-100 ps-chart-card">
+      <div class="card-header">{{ icon('chart', size=14) }} Response distribution</div>
+      <div class="card-body">
+        {% if counts.total > 0 %}
+        <div class="ps-chart-wrap" style="height:200px;">
+          <canvas id="distChart"></canvas>
+        </div>
+        {% else %}
+        <div class="ps-empty py-3">No recipients yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">{{ icon('shield', size=14) }} Compliance Findings</div>
+  <div class="card-body">
+    <p class="text-muted" style="font-size:13px;">
+      Based on this campaign's observed employee interactions, mapped against compliance rules.
+      <!--Severity thresholds are benchmarked against KnowBe4's 2025 Phishing By Industry Benchmarking
+      Report (global baseline click rate ~33%, falling to ~4% after 12 months of training).-->
+    </p>
+    {% for f in findings %}
+    <div class="d-flex gap-2 mb-3 pb-3 {{ 'border-bottom' if not loop.last }}">
+      <span class="ps-badge {{ 'ps-badge-danger' if f.severity in ['high','critical'] else 'ps-badge-warning' if f.severity == 'medium' else 'ps-badge-success' }}" style="flex-shrink:0;">{{ f.severity|upper }}</span>
+      <div style="flex:1; min-width:0;">
+        <div style="font-size:12px; font-weight:700; color:var(--ps-navy-800);">{{ f.regulation }}</div>
+        <p class="mb-1 mt-1" style="font-size:14px;">{{ f.finding }}</p>
+        {% if f.citations %}
+        <div style="background:var(--ps-bg); border:1px solid var(--ps-border); border-radius:var(--ps-radius-sm); padding:10px 12px; margin:8px 0;">
+          {% for c in f.citations %}
+          <div style="font-size:12px; {{ 'margin-top:8px;' if not loop.first }}">
+            <span style="font-weight:700; color:var(--ps-navy-800);">{{ c.jurisdiction }}</span>
+            <span class="text-muted"> - {{ c.article }}</span>
+            <div class="text-muted" style="font-style:italic; margin-top:2px;">{{ c.text }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if f.impact %}
+        <p class="mb-1" style="font-size:13px;"><em>Organisational impact:</em> {{ f.impact }}</p>
+        {% endif %}
+        <p class="mb-0 text-muted" style="font-size:13px;"><em>Recommendation:</em> {{ f.recommendation }}</p>
+      </div>
+    </div>
+    {% else %}
+    <div class="ps-empty py-3">No findings yet - send the campaign and wait for interactions to be recorded.</div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">Per-employee detail</div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Employee</th><th>Department</th><th>Subject</th><th>Persuasion</th><th>Difficulty</th><th>Events</th><th></th></tr></thead>
+      <tbody>
+        {% for email in emails %}
+        <tr>
+          <td>{{ email.full_name }}</td>
+          <td><span class="ps-badge ps-badge-neutral">{{ email.department }}</span></td>
+          <td>{{ email.subject }}</td>
+          <td>{% if email.persuasion_principle %}<span class="ps-badge ps-badge-neutral text-capitalize">{{ email.persuasion_principle.replace('_',' ') }}</span>{% endif %}</td>
+          <td>
+            <span class="ps-badge {{ 'ps-badge-success' if email.difficulty_level == 'reinforcement' else 'ps-badge-warning' if email.difficulty_level == 'advanced' else 'ps-badge-neutral' }}">
+              {{ email.difficulty_level }}
+            </span>
+          </td>
+          <td>
+            {% for event in per_email_events.get(email.id, []) %}
+              <span class="ps-badge ps-badge-info">{{ event }}</span>
+            {% endfor %}
+          </td>
+          <td>
+            <a href="{{ url_for('admin.employee_detail', employee_id=email.employee_id) }}" class="btn btn-sm btn-outline-primary">Profile</a>
+            <a href="{{ url_for('admin.interaction_timeline', campaign_email_id=email.id) }}" class="btn btn-sm btn-outline-secondary">Timeline</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if counts.total > 0 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  const dctx = document.getElementById('distChart');
+  if (dctx) {
+    new Chart(dctx, {
+      type: 'bar',
+      data: {
+        labels: ['Opened', 'Clicked', 'Submitted', 'Downloaded', 'Reported', 'Called'],
+        datasets: [{
+          data: [{{ counts.open }}, {{ counts.click }}, {{ counts.submit }}, {{ counts.download }}, {{ counts.report }}, {{ counts.called }}],
+          backgroundColor: ['#9CA3AF', '#B45309', '#B91C1C', '#B91C1C', '#15803D', '#B91C1C'],
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
+    });
+  }
+</script>
+{% endif %}
+{% endblock %}

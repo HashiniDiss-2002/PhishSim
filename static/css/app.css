@@ -1,0 +1,310 @@
+/*
+  app.css
+  -------
+  Shared design system for PhishSim's admin/engineer surfaces. Loaded once
+  from base.html for every page (including the plain-container branch), so
+  the same tokens apply everywhere without each template needing its own
+  <style> block. Deliberately restrained per the design brief: a dark navy
+  brand color, light neutral surfaces, and green/amber/red reserved for
+  status meaning only — no gradients, neon, or decorative chrome.
+
+  This file only adds utility classes and re-points Bootstrap 5's own CSS
+  variables (--bs-primary and friends); it does not replace Bootstrap's
+  grid, forms, or components, per the "don't rewrite the architecture"
+  constraint.
+*/
+
+:root {
+  --ps-navy-900: #10172B;
+  --ps-navy-800: #14213D;
+  --ps-navy-700: #1C2B4A;
+  --ps-teal-600: #0B5E5A;
+  --ps-teal-500: #0D9488;
+  --ps-teal-300: #5EEAD4;
+  --ps-bg: #F5F6F8;
+  --ps-surface: #FFFFFF;
+  --ps-border: #E6E8EE;
+  --ps-text: #1C2230;
+  --ps-text-muted: #667085;
+  --ps-success: #15803D;
+  --ps-success-soft: #E7F6EC;
+  --ps-warning: #B45309;
+  --ps-warning-soft: #FEF3E2;
+  --ps-danger: #B91C1C;
+  --ps-danger-soft: #FDECEC;
+  --ps-info-soft: #EAF1FB;
+  --ps-radius: 12px;
+  --ps-radius-sm: 8px;
+  --ps-shadow: 0 1px 2px rgba(16, 24, 43, 0.04), 0 2px 8px rgba(16, 24, 43, 0.06);
+
+  /* Re-point Bootstrap's own variables so .btn-primary, .bg-primary,
+     .text-primary, nav-pills .active, etc. all pick up the brand navy
+     without touching every template that already uses those classes. */
+  --bs-primary: var(--ps-navy-800);
+  --bs-primary-rgb: 20, 33, 61;
+  --bs-link-color: var(--ps-teal-600);
+  --bs-link-hover-color: var(--ps-navy-800);
+  --bs-body-bg: var(--ps-bg);
+  --bs-body-color: var(--ps-text);
+  --bs-border-radius: var(--ps-radius-sm);
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--ps-text);
+  background: var(--ps-bg);
+}
+
+a { color: var(--ps-teal-600); }
+a:hover { color: var(--ps-navy-800); }
+
+/* ---------- Flash messages ---------- */
+/* A single top-level stack, rendered once in base.html above any page's
+   own container (see the comment there) so a template with its own full-
+   bleed/flex layout — e.g. login.html's two-pane .login-shell — can never
+   squeeze an alert into a narrow flex column again. */
+.ps-flash-stack {
+  max-width: 980px;
+  margin: 14px auto 0;
+  padding: 0 16px;
+}
+.ps-flash-stack .alert { border-radius: var(--ps-radius-sm); }
+
+/* ---------- Top bar ---------- */
+.ps-topbar {
+  background: var(--ps-navy-800);
+  border-bottom: 1px solid var(--ps-navy-900);
+}
+.ps-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 17px;
+  color: #FFFFFF;
+}
+.ps-brand-mark {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: rgba(94, 234, 212, 0.14);
+  color: var(--ps-teal-300);
+  display: flex; align-items: center; justify-content: center;
+}
+.ps-user-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+  margin-right: 10px;
+}
+.ps-user-chip .name { font-size: 13px; font-weight: 600; color: #FFFFFF; }
+.ps-user-chip .role { font-size: 11px; color: #9BB0C9; text-transform: capitalize; }
+
+/* ---------- Sidebar ---------- */
+.ps-sidebar {
+  width: 232px;
+  flex-shrink: 0;
+  background: var(--ps-surface);
+  border-right: 1px solid var(--ps-border);
+  min-height: calc(100vh - 56px);
+  padding: 20px 14px;
+}
+.ps-nav-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9AA3B2;
+  padding: 0 10px;
+  margin: 18px 0 6px;
+}
+.ps-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--ps-radius-sm);
+  color: var(--ps-text);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  margin-bottom: 2px;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.ps-nav-link svg { opacity: 0.75; flex-shrink: 0; }
+.ps-nav-link:hover { background: var(--ps-bg); color: var(--ps-navy-800); }
+.ps-nav-link.active {
+  background: var(--ps-navy-800);
+  color: #FFFFFF;
+}
+.ps-nav-link.active svg { opacity: 1; }
+
+/* ---------- Page header ---------- */
+.ps-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+.ps-page-header h1, .ps-page-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ps-navy-800);
+  margin-bottom: 2px;
+}
+.ps-page-subtitle {
+  color: var(--ps-text-muted);
+  font-size: 14px;
+  max-width: 640px;
+}
+.ps-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ps-teal-600);
+  margin-bottom: 4px;
+}
+
+/* ---------- Cards ---------- */
+.card {
+  border: 1px solid var(--ps-border);
+  border-radius: var(--ps-radius);
+  box-shadow: var(--ps-shadow);
+}
+.card-header {
+  background: var(--ps-surface);
+  border-bottom: 1px solid var(--ps-border);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ps-navy-800);
+}
+.ps-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ps-navy-800);
+  margin-bottom: 4px;
+}
+
+/* ---------- KPI / metric cards ---------- */
+.ps-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.ps-kpi-card {
+  background: var(--ps-surface);
+  border: 1px solid var(--ps-border);
+  border-radius: var(--ps-radius);
+  box-shadow: var(--ps-shadow);
+  padding: 16px 18px;
+}
+.ps-kpi-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.ps-kpi-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--ps-info-soft);
+  color: var(--ps-navy-800);
+}
+.ps-kpi-icon.warn { background: var(--ps-warning-soft); color: var(--ps-warning); }
+.ps-kpi-icon.danger { background: var(--ps-danger-soft); color: var(--ps-danger); }
+.ps-kpi-icon.success { background: var(--ps-success-soft); color: var(--ps-success); }
+.ps-kpi-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--ps-navy-800);
+  line-height: 1;
+}
+.ps-kpi-label {
+  font-size: 12.5px;
+  color: var(--ps-text-muted);
+  margin-top: 4px;
+}
+
+/* ---------- Soft status badges (meaningful colour only) ---------- */
+.ps-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  line-height: 1.5;
+}
+.ps-badge-neutral { background: #F1F2F5; color: #4B5264; }
+.ps-badge-info { background: var(--ps-info-soft); color: var(--ps-navy-800); }
+.ps-badge-success { background: var(--ps-success-soft); color: var(--ps-success); }
+.ps-badge-warning { background: var(--ps-warning-soft); color: var(--ps-warning); }
+.ps-badge-danger { background: var(--ps-danger-soft); color: var(--ps-danger); }
+.ps-badge-purple { background: #F1EBFC; color: #6D28D9; }
+
+/* ---------- Empty states ---------- */
+.ps-empty {
+  text-align: center;
+  padding: 36px 20px;
+  color: var(--ps-text-muted);
+}
+.ps-empty .ps-empty-icon {
+  width: 44px; height: 44px;
+  margin: 0 auto 12px;
+  border-radius: 10px;
+  background: var(--ps-bg);
+  display: flex; align-items: center; justify-content: center;
+  color: #9AA3B2;
+}
+
+/* ---------- Activity list ---------- */
+.ps-activity-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ps-border);
+  font-size: 13.5px;
+}
+.ps-activity-item:last-child { border-bottom: none; }
+.ps-activity-dot {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--ps-info-soft);
+  color: var(--ps-navy-800);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.ps-activity-time { color: var(--ps-text-muted); font-size: 12px; }
+
+/* ---------- Buttons ---------- */
+.btn-primary { background: var(--ps-navy-800); border-color: var(--ps-navy-800); }
+.btn-primary:hover { background: var(--ps-navy-900); border-color: var(--ps-navy-900); }
+.btn-outline-primary { color: var(--ps-navy-800); border-color: var(--ps-navy-800); }
+.btn-outline-primary:hover { background: var(--ps-navy-800); border-color: var(--ps-navy-800); }
+
+/* ---------- Tables ---------- */
+.table { font-size: 14px; }
+.table thead th {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8891A3;
+  font-weight: 600;
+  border-bottom: 1px solid var(--ps-border);
+}
+
+/* ---------- Chart containers ---------- */
+.ps-chart-card { min-height: 260px; }
+.ps-chart-wrap { position: relative; height: 230px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 860px) {
+  .ps-sidebar { display: none; }
+  .ps-kpi-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+}

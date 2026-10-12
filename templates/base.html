@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}PhishSim{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css') }}" rel="stylesheet">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  {% from "partials/_icons.html" import icon %}
+
+  {# Flash messages are rendered ONCE here, outside any page's own content
+     container - never inside a template's {% block container_class %}
+     override. login.html's container is a two-pane flex row
+     (.login-shell); an alert div placed as a flex SIBLING inside that row
+     became a squeezed flex item (a narrow column) instead of a normal
+     full-width banner. Rendering them at the top level, before any
+     template-specific layout begins, means no current or future custom
+     container_class can ever break them the same way again. #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="ps-flash-stack">
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show mb-2" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  {% if session.get('user_id') %}
+  <nav class="navbar navbar-expand-lg ps-topbar" style="height:56px;">
+    <div class="container-fluid px-3">
+      <span class="ps-brand">
+        <span class="ps-brand-mark">{{ icon('shield', size=16) }}</span>
+        PhishSim
+      </span>
+      <div class="d-flex align-items-center">
+        <span class="ps-user-chip d-none d-sm-flex">
+          <span class="name">{{ session.get('full_name') }}</span>
+          <span class="role">{{ session.get('role') }}{% if session.get('department') %} &middot; {{ session.get('department') }}{% endif %}</span>
+        </span>
+        <a href="{{ url_for('auth.logout') }}" class="btn btn-sm" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.18);">
+          {{ icon('logout', size=14) }} Log out
+        </a>
+      </div>
+    </div>
+  </nav>
+  {% endif %}
+
+  {% if session.get('role') == 'admin' %}
+  {# Core-admin / department-admin views: sidebar + fluid content pane next
+     to it. Deliberately a separate branch from the plain page below (see
+     the historical layout-regression note this comment used to carry) so
+     login/register/engineer pages keep their own full-height layouts
+     untouched. #}
+  <div class="d-flex align-items-stretch">
+    <nav class="ps-sidebar d-none d-md-block">
+      <div class="ps-nav-section-label">Workspace</div>
+      <a class="ps-nav-link {% if request.endpoint == 'admin.admin_dashboard' %}active{% endif %}"
+         href="{{ url_for('admin.admin_dashboard') }}">{{ icon('dashboard') }} Dashboard</a>
+      <a class="ps-nav-link {% if request.endpoint == 'admin.upload_employees' %}active{% endif %}"
+         href="{{ url_for('admin.upload_employees') }}">{{ icon('upload') }} Upload Employees</a>
+      <a class="ps-nav-link {% if request.endpoint == 'admin.create_campaign' %}active{% endif %}"
+         href="{{ url_for('admin.create_campaign') }}">{{ icon('send') }} New Campaign</a>
+
+      {% if session.get('department') is none %}
+      <div class="ps-nav-section-label">Organization</div>
+      <a class="ps-nav-link {% if request.endpoint == 'admin.manage_department_admins' %}active{% endif %}"
+         href="{{ url_for('admin.manage_department_admins') }}">{{ icon('users') }} Manage Admins</a>
+      <a class="ps-nav-link {% if request.endpoint == 'admin.audit_log' %}active{% endif %}"
+         href="{{ url_for('admin.audit_log') }}">{{ icon('log') }} Audit Log</a>
+      {% endif %}
+
+      <div class="ps-nav-section-label">Account</div>
+      <a class="ps-nav-link {% if request.endpoint == 'auth.settings' %}active{% endif %}"
+         href="{{ url_for('auth.settings') }}">{{ icon('settings') }} Settings</a>
+      <a class="ps-nav-link {% if request.endpoint == 'admin.contact_support' %}active{% endif %}"
+         href="{{ url_for('admin.contact_support') }}">{{ icon('mail') }} Contact Support</a>
+      <a class="ps-nav-link {% if request.endpoint == 'admin.faq' %}active{% endif %}"
+         href="{{ url_for('admin.faq') }}">{{ icon('wrench') }} FAQ &amp; Setup Guide</a>
+    </nav>
+
+    <div class="container-fluid py-4 px-4" style="flex: 1 1 auto; min-width: 0;">
+      {# Same "content" block every page template defines - rendered here
+         via self.content() rather than a second {% block content %} tag,
+         since Jinja does not allow defining the same block name twice in
+         one template source. #}
+      {{ self.content() }}
+    </div>
+  </div>
+  {% else %}
+  <div class="{% block container_class %}container py-4{% endblock %}">
+    {% block content %}{% endblock %}
+  </div>
+  {% endif %}
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

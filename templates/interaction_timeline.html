@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "partials/_icons.html" import icon %}
+{% block title %}Interaction Timeline · PhishSim{% endblock %}
+{% block content %}
+
+<div class="ps-page-header">
+  <div>
+    <div class="ps-eyebrow">Interaction timeline</div>
+    <h1>{{ campaign_email.employee_full_name }}</h1>
+    <p class="ps-page-subtitle">
+      Campaign: <strong>{{ campaign_email.campaign_name }}</strong> &middot;
+      Subject: &ldquo;{{ campaign_email.subject }}&rdquo;
+    </p>
+  </div>
+  <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">{{ icon('arrow-left', size=14) }} Back</a>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body" style="font-size:13px;">
+    Every timestamp below is this server's own clock at the moment the request arrived; IP address and
+    User-Agent are exactly what that request itself reported.
+    A blank IP/User-Agent means it genuinely wasn't recorded for that event.
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">{{ icon('clock', size=14) }} Event timeline</div>
+  <div class="card-body p-0">
+    {% if timeline %}
+    <table class="table table-sm mb-0">
+      <thead>
+        <tr>
+          <th style="width:220px;">Event</th>
+          <th style="width:190px;">Timestamp</th>
+          <th style="width:150px;">IP address</th>
+          <th>User agent</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in timeline %}
+        <tr>
+          <td>
+            <span class="d-flex align-items-center gap-2">
+              <span class="ps-activity-dot" style="position:static; width:26px; height:26px;">
+                {{ icon(event_icons.get(t.event_type, 'clock'), size=13) }}
+              </span>
+              <span>
+                {{ event_labels.get(t.event_type, t.event_type) }}
+                {% if t.event_type == 'submit' and t.dwell_ms is not none %}
+                <div class="text-muted" style="font-size:11.5px;">{{ t.dwell_ms }} ms after the page loaded</div>
+                {% endif %}
+              </span>
+            </span>
+          </td>
+          <td class="text-muted">{{ t.occurred_at }}</td>
+          <td class="text-muted">
+            {% if t.ip_address %}{{ t.ip_address }}{% else %}<span class="ps-badge ps-badge-neutral">Not recorded</span>{% endif %}
+          </td>
+          <td class="text-muted" style="font-size:12.5px; word-break:break-word;">
+            {% if t.user_agent %}{{ t.user_agent }}{% else %}<span class="ps-badge ps-badge-neutral">Not recorded</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="ps-empty py-3">
+      <div class="ps-empty-icon">{{ icon('inbox', size=20) }}</div>
+      No activity recorded yet - this email hasn't been sent, or no interactions have happened since.
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

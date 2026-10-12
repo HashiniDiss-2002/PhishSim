@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Account Verification</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-4">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">{{ org_name or "Your Organization" }} — Sign In</h5>
+            <p class="text-muted" style="font-size:14px;">Please verify your account details to continue.</p>
+            {# Research note (server-side comment, never sent to the browser —
+               an HTML comment here would be visible via "View Page Source"
+               to the simulated employee before they even submit, which would
+               give away the simulation and defeat the whole exercise):
+               this form intentionally does NOT need real input to be
+               meaningful for the study. Whatever is typed is never read
+               server-side (see tracking.py: track_submit) — only the act of
+               submitting is logged, never the content. #}
+            <form method="POST" action="{{ url_for('tracking.track_submit', token=token) }}" id="phishsim-login-form">
+              <div class="mb-3">
+                <input type="text" class="form-control" placeholder="Username" autocomplete="off">
+              </div>
+              <div class="mb-3">
+                <input type="password" class="form-control" placeholder="Password" autocomplete="off">
+              </div>
+              {# Click-timing behavioural signal (novelty feature): a hidden
+                 field filled in by the tiny script below, recording only an
+                 elapsed-time number — never any keystroke content — between
+                 this page loading and the form being submitted. See
+                 tracking.py: track_submit() and services/compliance_mapper.py:
+                 classify_click_speed(). #}
+              <input type="hidden" name="dwell_ms" id="phishsim-dwell-ms" value="">
+              <button type="submit" class="btn btn-primary w-100">Sign In</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var loadedAt = Date.now();
+      var form = document.getElementById('phishsim-login-form');
+      var field = document.getElementById('phishsim-dwell-ms');
+      if (form && field) {
+        form.addEventListener('submit', function () {
+          field.value = Date.now() - loadedAt;
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

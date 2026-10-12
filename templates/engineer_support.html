@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "partials/_icons.html" import icon %}
+{% block title %}Support Inbox · PhishSim{% endblock %}
+{% block content %}
+
+<div class="ps-page-header">
+  <div>
+    <div class="ps-eyebrow">Platform engineer</div>
+    <h1>Support inbox</h1>
+    <p class="ps-page-subtitle">
+      Every organization's support tickets. This is the one deliberate exception to "no tenant data" —
+      a ticket's subject/message is free text an admin chose to send here, not data the platform
+      surfaces on its own.
+    </p>
+  </div>
+  <a href="{{ url_for('admin.engineer_dashboard') }}" class="btn btn-outline-secondary btn-sm">{{ icon('arrow-left', size=14) }} Back to dashboard</a>
+</div>
+
+{% set open_tickets = tickets|selectattr('status', 'equalto', 'open')|list %}
+{% set resolved_tickets = tickets|selectattr('status', 'equalto', 'resolved')|list %}
+
+<div class="ps-kpi-grid">
+  <div class="ps-kpi-card">
+    <div class="ps-kpi-top"><div class="ps-kpi-icon warn">{{ icon('mail', size=16) }}</div></div>
+    <div class="ps-kpi-value">{{ open_tickets|length }}</div>
+    <div class="ps-kpi-label">Open tickets</div>
+  </div>
+  <div class="ps-kpi-card">
+    <div class="ps-kpi-top"><div class="ps-kpi-icon success">{{ icon('check-circle', size=16) }}</div></div>
+    <div class="ps-kpi-value">{{ resolved_tickets|length }}</div>
+    <div class="ps-kpi-label">Resolved</div>
+  </div>
+</div>
+
+{% for t in tickets %}
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>
+      <strong>{{ t.subject }}</strong>
+      <span class="text-muted" style="font-size:12.5px;"> &middot; {{ t.org_name }} &middot; {{ t.raised_by_name }} ({{ t.raised_by_role }})</span>
+    </span>
+    {% if t.status == 'resolved' %}
+      <span class="ps-badge ps-badge-success">Resolved</span>
+    {% else %}
+      <span class="ps-badge ps-badge-warning">Open</span>
+    {% endif %}
+  </div>
+  <div class="card-body">
+    <p style="white-space:pre-wrap;">{{ t.message }}</p>
+    <p class="text-muted" style="font-size:11.5px;">Raised {{ t.created_at }}</p>
+
+    {% if t.engineer_response %}
+    <div style="background:var(--ps-bg); border:1px solid var(--ps-border); border-radius:var(--ps-radius-sm); padding:10px 12px; margin-top:10px;">
+      <div style="font-size:12px; font-weight:700;">Response</div>
+      <p class="mb-1" style="white-space:pre-wrap;">{{ t.engineer_response }}</p>
+      <div class="text-muted" style="font-size:11.5px;">&mdash; {{ t.responded_by_name }}, {{ t.responded_at }}</div>
+    </div>
+    {% else %}
+    <form method="POST" action="{{ url_for('admin.respond_support_ticket', ticket_id=t.id) }}" class="mt-2">
+      <textarea name="response" class="form-control" rows="3" required
+                placeholder="Write a response — this will be shown to the admin who raised the ticket and marks it resolved."></textarea>
+      <button type="submit" class="btn btn-primary btn-sm mt-2">{{ icon('send', size=14) }} Send response</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% else %}
+<div class="ps-empty py-3">
+  <div class="ps-empty-icon">{{ icon('inbox', size=20) }}</div>
+  No support tickets yet.
+</div>
+{% endfor %}
+{% endblock %}
