@@ -2030,6 +2030,134 @@ def reset_admin_password(user_id):
     return redirect(url_for("admin.manage_department_admins"))
 
 
+@admin_bp.route("/admin/organization/delete", methods=["GET", "POST"])
+@core_admin_required
+def delete_organization():
+    """
+    Permanently and irreversibly erases this organization and every row of
+    personal/behavioural data tied to it — the right-to-erasure control
+    this project's data-protection framing (GDPR Art. 17 / Sri Lanka PDPA)
+    previously only described in words, not code. @core_admin_required
+    (not @role_required('admin')) so a department admin can never trigger
+    this — only the single core admin accountable for the whole org.
+
+    GET renders a confirmation page. Nothing is deleted on GET, ever.
+
+    POST requires the admin to TYPE the organization's exact current name
+    into a text field — a stronger, harder-to-trigger-by-accident control
+    than a JS confirm() popup alone, which only guards the button click
+    client-side and can't stop a direct POST. The typed value is checked
+    server-side against the real name before anything is deleted.
+
+    Deletion order below is deliberately FK-safe under
+    PRAGMA foreign_keys=ON (see database.py): every row that REFERENCES
+    another table is deleted before the row it references, so nothing
+    ever violates a foreign-key constraint mid-delete:
+      interactions -> campaign_emails -> campaigns -> support_tickets
+      -> password_reset_tokens -> audit_log -> employees -> users
+      -> organizations (last).
+    threat_intel_sources/threat_intel_scenarios are NOT touched — they are
+    a shared, engineer-owned resource (see /engineer/threat-sources),
+    never owned by one org, so deleting an org must never remove them.
+
+    A single new audit_log row records the deletion itself, written with
+    org_id=NULL (a platform-wide event with no single org — the schema's
+    own comment anticipated exactly this case) so the record survives
+    even though every OTHER audit_log row for this org is deleted along
+    with it. ENGINEER_VISIBLE_ACTIONS (services/audit.py) includes
+    'organization_deleted' so the platform engineer can see that an org
+    was erased, and by whom, without needing any tenant data access.
+
+    The acting admin's own account is itself deleted by this action (it
+    belongs to the org being erased), so their session is cleared and
+    they're redirected to the login page afterward rather than back to
+    any now-nonexistent dashboard.
+    """
+    org_id = session["org_id"]
+    db = get_db()
+    try:
+        org = db.execute("SELECT * FROM organizations WHERE id = ?", (org_id,)).fetchone()
+        if org is None:
+            flash("Organization not found.", "danger")
+            return redirect(url_for("admin.admin_dashboard"))
+
+        if request.method == "GET":
+            employee_count = db.execute(
+                "SELECT COUNT(*) AS c FROM employees WHERE org_id = ?", (org_id,)
+            ).fetchone()["c"]
+            campaign_count = db.execute(
+                "SELECT COUNT(*) AS c FROM campaigns WHERE org_id = ?", (org_id,)
+            ).fetchone()["c"]
+            return render_template(
+                "delete_organization.html", org=org,
+                employee_count=employee_count, campaign_count=campaign_count,
+            )
+
+        typed_name = request.form.get("confirm_name", "").strip()
+        if typed_name != org["name"]:
+            flash(
+                "That didn't match the organization's name exactly — nothing was deleted. "
+                "Please type it exactly as shown to confirm.",
+                "danger",
+            )
+            return redirect(url_for("admin.delete_organization"))
+
+        org_name = org["name"]  # snapshot before the row itself is gone
+        actor_name = session.get("full_name")
+        actor_role = session.get("role")
+
+        db.execute(
+            "DELETE FROM interactions WHERE campaign_email_id IN ("
+            "  SELECT id FROM campaign_emails WHERE campaign_id IN ("
+            "    SELECT id FROM campaigns WHERE org_id = ?))",
+            (org_id,),
+        )
+        db.execute(
+            "DELETE FROM campaign_emails WHERE campaign_id IN ("
+            "  SELECT id FROM campaigns WHERE org_id = ?)",
+            (org_id,),
+        )
+        db.execute("DELETE FROM campaigns WHERE org_id = ?", (org_id,))
+        db.execute("DELETE FROM support_tickets WHERE org_id = ?", (org_id,))
+        db.execute(
+            "DELETE FROM password_reset_tokens WHERE user_id IN ("
+            "  SELECT id FROM users WHERE org_id = ?) "
+            "OR requested_by IN (SELECT id FROM users WHERE org_id = ?)",
+            (org_id, org_id),
+        )
+        db.execute("DELETE FROM audit_log WHERE org_id = ?", (org_id,))
+        db.execute("DELETE FROM employees WHERE org_id = ?", (org_id,))
+        db.execute("DELETE FROM users WHERE org_id = ?", (org_id,))
+        db.execute("DELETE FROM organizations WHERE id = ?", (org_id,))
+
+        # Permanent record of the erasure itself — org_id=NULL so it is
+        # NOT caught by the "DELETE FROM audit_log WHERE org_id = ?" above,
+        # and survives after everything else tied to this org is gone.
+        log_action(
+            db, org_id=None, actor_user_id=None,
+            actor_role=actor_role, actor_name=actor_name,
+            action="organization_deleted",
+            description=(
+                f"Organization '{org_name}' (id={org_id}) was permanently deleted, "
+                f"along with all of its employees, campaigns, interaction data, and "
+                f"accounts, by its core admin ({actor_name})."
+            ),
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+    session.clear()
+    flash(
+        f"'{org_name}' and all associated data have been permanently deleted.",
+        "success",
+    )
+    return redirect(url_for("auth.login"))
+
+
 @admin_bp.route("/admin/audit-log")
 @core_admin_required
 def audit_log():

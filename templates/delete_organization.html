@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "partials/_icons.html" import icon %}
+{% block title %}Delete Organization · PhishSim{% endblock %}
+{% block content %}
+
+<div class="ps-page-header">
+  <div>
+    <div class="ps-eyebrow">Danger Zone</div>
+    <h1>Delete '{{ org.name }}'</h1>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-8">
+    <div class="card border-danger mb-4">
+      <div class="card-header bg-danger text-white">
+        {{ icon('trash', size=14) }} This action is permanent and cannot be undone
+      </div>
+      <div class="card-body">
+        <p>
+          Deleting <strong>{{ org.name }}</strong> will permanently erase, right now,
+          with no way to recover any of it afterward:
+        </p>
+        <ul>
+          <li><strong>{{ employee_count }}</strong> employee record(s) — names, emails, departments</li>
+          <li><strong>{{ campaign_count }}</strong> campaign(s) and every email generated for them</li>
+          <li>Every logged interaction (opens, clicks, submissions, downloads, reports) tied to those campaigns</li>
+          <li>All support tickets, password-reset requests, and this organization's audit log</li>
+          <li>Every admin account belonging to this organization — including your own</li>
+        </ul>
+        <p class="text-muted" style="font-size:13px;">
+          This exists to make the organization's right to erasure (GDPR Art. 17 /
+          Sri Lanka PDPA) a real, working control, not just a stated policy. Only
+          the platform engineer will retain a single, permanent record that an
+          organization named "{{ org.name }}" was deleted and by whom — no employee
+          or campaign data is kept anywhere after this.
+        </p>
+
+        <hr>
+
+        <form method="POST" action="{{ url_for('admin.delete_organization') }}"
+              onsubmit="return confirm('This is permanent. Delete {{ org.name|tojson }} and ALL of its data right now?');">
+          <div class="mb-3">
+            <label class="form-label">
+              Type <strong>{{ org.name }}</strong> exactly to confirm:
+            </label>
+            <input type="text" name="confirm_name" class="form-control" autocomplete="off" required>
+          </div>
+          <button type="submit" class="btn btn-danger">
+            {{ icon('trash', size=14) }} Permanently delete this organization
+          </button>
+          <a href="{{ url_for('auth.settings') }}" class="btn btn-outline-secondary ms-2">Cancel</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -40,7 +40,9 @@
       <div class="card-header">{{ icon('image', size=14) }} Organization Logo</div>
       <div class="card-body">
         <p class="text-muted" style="font-size:13px;">
-          Upload the official logo of the organization.
+          Upload a real logo to replace the generated placeholder banner at
+          the top of every simulation email. Any common image format is
+          accepted — it's validated and converted to PNG automatically.
         </p>
         <form method="POST" action="{{ url_for('admin.upload_logo') }}" enctype="multipart/form-data">
           <div class="mb-3">
@@ -53,4 +55,24 @@
   </div>
   {% endif %}
 </div>
+
+{% if is_core_admin %}
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card border-danger mb-4">
+      <div class="card-header bg-danger text-white">{{ icon('trash', size=14) }} Danger Zone</div>
+      <div class="card-body">
+        <p class="text-muted" style="font-size:13px;">
+          Permanently delete this organization and every employee, campaign,
+          and interaction record tied to it. This cannot be undone. Only the
+          core admin can do this.
+        </p>
+        <a href="{{ url_for('admin.delete_organization') }}" class="btn btn-outline-danger">
+          {{ icon('trash', size=14) }} Delete Organization
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
