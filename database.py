@@ -29,6 +29,18 @@ def get_db():
     conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    # WAL (Write-Ahead Logging) mode lets readers and a single writer work
+    # concurrently without blocking each other, unlike the default
+    # rollback-journal mode, where ANY writer holds a lock that blocks
+    # every other connection (reader or writer) until it commits. This
+    # project opens a fresh connection per request with no shared
+    # connection pool, so under any real concurrent use (a tracking pixel
+    # firing while an admin page is mid-write, two browser tabs, etc.)
+    # rollback-journal mode surfaces as "database is locked" far more
+    # easily. WAL is a one-time, persistent setting stored in the database
+    # file itself, so this PRAGMA is a cheap no-op on every connection
+    # after the first.
+    conn.execute("PRAGMA journal_mode=WAL")
     return conn
 
 
