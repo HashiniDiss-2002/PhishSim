@@ -19,6 +19,8 @@ import os
 import secrets
 import sqlite3
 import traceback
+
+import requests
 from datetime import datetime
 from pathlib import Path
 
@@ -988,7 +990,16 @@ def create_campaign():
             )
             campaign_id = cur.lastrowid
 
+            # Commit the campaign row right away, rather than leaving it
+            # part of one long transaction spanning the whole generation
+            # loop below. See the per-employee commit inside that loop for
+            # the full reasoning — this is the same fix, applied one
+            # statement earlier.
+            db.commit()
+
             errors = 0
+            api_failures = 0  # distinct from moderation `errors` — see the
+            # requests.exceptions.RequestException handler below
             # Department-wide persuasion trend, used below as one input into
             # each employee's behavior_profile — computed once per
             # department actually present in this campaign's recipient
@@ -996,7 +1007,30 @@ def create_campaign():
             # department + org, so re-running it per employee would be
             # redundant N+1 work for no benefit).
             dept_trend_cache = {}
-            for emp in employees:
+
+            # Pretext-generation pacing: a small pause between employees'
+            # LLM calls, mirroring send_campaign()'s SEND_DELAY_SECONDS
+            # pattern above. Only applied when a real GROQ_API_KEY is set
+            # and the campaign actually calls the LLM per employee
+            # (condition='generic' and vector='callback_toad' both use a
+            # fixed template and never call the LLM, so pacing them would
+            # only slow the campaign down for no benefit; mock mode makes
+            # no real network call either). Prevents exactly the failure
+            # this project hit in practice: Groq's free-tier per-minute
+            # rate limit being exceeded by calling the LLM once per
+            # employee back-to-back with no pause — see the
+            # implementation-issues/departures table.
+            import time  # local import, same style as send_campaign()'s pacing delay
+            PRETEXT_DELAY_SECONDS = float(os.environ.get("PRETEXT_DELAY_SECONDS", "1"))
+            _pace_llm_calls = (
+                bool(os.environ.get("GROQ_API_KEY"))
+                and condition != "generic"
+                and vector != "callback_toad"
+            )
+
+            for emp_index, emp in enumerate(employees):
+                if _pace_llm_calls and emp_index > 0:
+                    time.sleep(PRETEXT_DELAY_SECONDS)
                 # Adaptive difficulty engine: look at this employee's risk
                 # tier from their history BEFORE this campaign (every
                 # campaign_email created below is for the CURRENT campaign,
@@ -1114,6 +1148,28 @@ def create_campaign():
                 except ModerationError:
                     errors += 1
                     continue
+                except requests.exceptions.RequestException as e:
+                    # A persistent LLM-API failure (rate limit exhausted
+                    # past all retries, timeout, outage) for ONE employee
+                    # must not roll back every other employee's already-
+                    # generated pretext in this same campaign — the same
+                    # reasoning as send_campaign()'s per-recipient
+                    # isolation (see that function's docstring): an error
+                    # reaching us here means nothing has been written to
+                    # the database for this employee yet (the
+                    # campaign_emails INSERT happens further below, after
+                    # a successful generate_pretext/generate_toad_pretext
+                    # call), so skipping is safe — no partial row, no
+                    # rollback needed, and the employees already processed
+                    # keep their generated content.
+                    print("=" * 70)
+                    print("PRETEXT GENERATION FAILED FOR ONE EMPLOYEE — skipping, campaign continues:")
+                    print(f"Employee: {emp['full_name']}, error type: {type(e).__name__}")
+                    print(f"Error message: {e}")
+                    traceback.print_exc()
+                    print("=" * 70)
+                    api_failures += 1
+                    continue
                 except Exception as e:
                     print("=" * 70)
                     print("CAMPAIGN GENERATION FAILED — full details below:")
@@ -1122,13 +1178,22 @@ def create_campaign():
                     traceback.print_exc()
                     print("=" * 70)
 
+                    # Note: this is no longer "nothing was saved" — the
+                    # campaign row and every employee processed BEFORE this
+                    # one were already committed individually above, so
+                    # they remain in the database. db.rollback() here only
+                    # discards whatever uncommitted work exists for the
+                    # CURRENT employee (there is none, since generation
+                    # failed before any INSERT for them was attempted).
                     db.rollback()
                     flash(
-                        f"Campaign generation failed partway through: {type(e).__name__}: {e} "
-                        f"(see terminal for full details). Nothing was saved — please try again.",
+                        f"Campaign generation stopped partway through, after an unexpected error: "
+                        f"{type(e).__name__}: {e} (see terminal for full details). "
+                        f"Emails already generated for earlier employees in this campaign were saved "
+                        f"— you can view the campaign and decide whether to retry the rest.",
                         "danger",
                     )
-                    return redirect(url_for("admin.create_campaign"))
+                    return redirect(url_for("admin.campaign_detail", campaign_id=campaign_id))
 
                 token = secrets.token_urlsafe(16)
                 tracking_pixel = _public_url("tracking.track_open", token=token)
@@ -1186,6 +1251,19 @@ def create_campaign():
                      1 if attachment_filename else 0, content.get("persuasion_principle"),
                      difficulty if vector != "callback_toad" else "standard"),
                 )
+                # Commit after EACH employee, not once at the end of the
+                # whole loop. With PRETEXT_DELAY_SECONDS pacing (needed to
+                # stay under Groq's free-tier tokens-per-minute limit — see
+                # services/pretext_generator.py), this loop can now run for
+                # minutes on a multi-employee campaign. Holding one
+                # uncommitted transaction open for that entire time blocks
+                # every OTHER write to the database (a tracking pixel hit,
+                # a login, an audit-log entry — anything), which is exactly
+                # what produced the "database is locked" error hit in
+                # practice. Committing per employee keeps each write's lock
+                # duration down to roughly one INSERT, the same reasoning
+                # as send_campaign()'s per-recipient commit.
+                db.commit()
 
             stage_label = "Stage 2 (real-world-informed)" if stage2_reference else "Stage 1"
             log_action(
@@ -1194,8 +1272,10 @@ def create_campaign():
                 action="campaign_created",
                 description=(
                     f"Created campaign '{name}' ({condition}, {stage_label}) — "
-                    f"{len(employees) - errors} emails generated"
-                    + (f", {errors} blocked by moderation" if errors else "") + "."
+                    f"{len(employees) - errors - api_failures} emails generated"
+                    + (f", {errors} blocked by moderation" if errors else "")
+                    + (f", {api_failures} skipped after an LLM-service error" if api_failures else "")
+                    + "."
                 ),
             )
             db.commit()
@@ -1205,10 +1285,18 @@ def create_campaign():
         finally:
             db.close()
 
-        msg = f"Campaign '{name}' created with {len(employees) - errors} emails generated."
+        msg = (
+            f"Campaign '{name}' created with "
+            f"{len(employees) - errors - api_failures} emails generated."
+        )
         if errors:
             msg += f" {errors} were blocked by the moderation filter."
-        flash(msg, "success")
+        if api_failures:
+            msg += (
+                f" {api_failures} employee(s) were skipped after the LLM service kept "
+                f"returning errors (see terminal) — you can retry for just those employees."
+            )
+        flash(msg, "success" if not api_failures else "warning")
         return redirect(url_for("admin.campaign_detail", campaign_id=campaign_id))
 
     try:

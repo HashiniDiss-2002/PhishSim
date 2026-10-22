@@ -228,6 +228,7 @@ def generate_toad_pretext(employee_name: str, department: str, org_name: str) ->
     return result
 
 
+
 class ModerationError(Exception):
     pass
 
@@ -413,6 +414,19 @@ Output ONLY valid JSON with exactly four keys: "subject", "html_body",
 Respond with JSON only, no other text, no markdown code fences."""
 
 
+LLM_MAX_RETRIES = int(os.environ.get("LLM_MAX_RETRIES", "5"))
+
+# Base backoff for a 429 (rate-limited) response, in seconds. Doubled each
+# attempt (1, 2, 4, 8, 16 s by default for 5 attempts) — exponential
+# backoff rather than the earlier fixed 2s/4s wait, because Groq's free
+# tier limits reset per-minute: a short, fixed wait was long enough to
+# dodge a single slow request but not a sustained burst (e.g. generating
+# pretexts for many employees back-to-back in create_campaign()'s loop),
+# which is exactly the failure this project hit in practice — see the
+# departures/implementation-issues table.
+LLM_RETRY_BASE_SECONDS = float(os.environ.get("LLM_RETRY_BASE_SECONDS", "1"))
+
+
 def _call_llm(prompt: str) -> dict:
     api_key = os.environ.get("GROQ_API_KEY")
     headers = {
@@ -436,15 +450,40 @@ def _call_llm(prompt: str) -> dict:
     }
 
     last_error = None
-    for attempt in range(3):
+    for attempt in range(LLM_MAX_RETRIES):
         try:
             resp = requests.post(GROQ_API_URL, headers=headers, json=payload, timeout=30)
             if resp.status_code == 429:
                 last_error = requests.exceptions.HTTPError("429 rate limited (retryable)", response=resp)
-                if attempt < 2:
-                    time.sleep(2 * (attempt + 1))
+                if attempt < LLM_MAX_RETRIES - 1:
+                    # Respect the server's own Retry-After header when it
+                    # provides one (Groq sometimes does); otherwise fall
+                    # back to exponential backoff.
+                    retry_after = resp.headers.get("Retry-After")
+                    if retry_after is not None:
+                        try:
+                            wait_seconds = float(retry_after)
+                        except ValueError:
+                            wait_seconds = LLM_RETRY_BASE_SECONDS * (2 ** attempt)
+                    else:
+                        wait_seconds = LLM_RETRY_BASE_SECONDS * (2 ** attempt)
+                    time.sleep(wait_seconds)
                     continue
-                resp.raise_for_status()
+                # All retries exhausted and still 429: raise with Groq's
+                # actual response body attached, not just the generic
+                # "429 Client Error" text plain raise_for_status() gives —
+                # the body usually says WHICH limit was hit (requests/day,
+                # requests/minute, or tokens/minute), which matters for
+                # deciding whether a longer pacing delay would even help
+                # or whether it's a hard daily cap that has to be waited out.
+                try:
+                    detail = resp.json()
+                except ValueError:
+                    detail = resp.text
+                raise requests.exceptions.HTTPError(
+                    f"429 rate limited after {LLM_MAX_RETRIES} attempts — Groq response: {detail}",
+                    response=resp,
+                )
             if resp.status_code >= 400:
                 try:
                     detail = resp.json()
@@ -456,7 +495,7 @@ def _call_llm(prompt: str) -> dict:
             break
         except requests.exceptions.ReadTimeout as e:
             last_error = e
-            if attempt < 2:
+            if attempt < LLM_MAX_RETRIES - 1:
                 continue
             raise
 
